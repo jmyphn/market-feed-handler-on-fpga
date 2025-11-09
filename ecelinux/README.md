@@ -1,0 +1,3 @@
+# ecelinux
+## File structure
+TODO
