@@ -1,124 +1,142 @@
-//=========================================================================
-// bnn_test.cpp
-//=========================================================================
-// @brief: testbench for Binarized Neural Betwork(BNN) digit recongnition
-// application
+// itch_test.cpp — minimal ITCH parser using a hardcoded file path
 
+#include "itch_reader.hpp"
+#include "itch_common.hpp"
+
+#include <cstdint>
 #include <iostream>
-#include <fstream>
-#include "itch.h"
-#include "timer.h"
-#include <stdlib.h>
-#include <unistd.h>
-#include <ctype.h>
-#define _BSD_SOURCE        
-#include <endian.h>
-#include "itch.h"
-#include "typedefs.h"
+#include <unordered_map>
 
-using namespace std;
+static const char* INPUT_ITCH_FILE = "./data/itch_data";
 
-// Number of test instances
-const int TEST_SIZE = 100;
-const int REPS = 20;
-
-//------------------------------------------------------------------------
-// file.c
-//------------------------------------------------------------------------
-int read_bin_file(FILE *fptr, bit32_t n){
-	bit32_t i;
-	uint16_t len; // payload lenght ( big endian )
-	char type; // itch message type
-	char buff[ITCH_MSG_MAX_LEN];
-	size_t ret;
-	tv_itch5_s itch_msg;
-	// read
-	for( i = 0; i < n; i++){
-		ret = fread(&len, sizeof(len), 1, fptr);
-		// convert to little endiant
-		len = be16toh(len);
-
-		ret = fread(&type, sizeof(type), 1, fptr);
-		if ( !ret ) return 1;	
-
-		#ifdef DEBUF	
-		printf("len %d,type %c, ret %ld\n", len, type,ret);
-		#endif
-
-		// read rest of message
-		if ( len-1 > ITCH_MSG_MAX_LEN ) return 1;
-		ret = fread(buff, sizeof(buff[0]), len-1, fptr);
-		if ( !ret ) return 1; 
-
-		ret = (size_t)fill_tv_itch5( type, buff, len-1, &itch_msg);
-		if ( ret ) return 1;
-
-		print_tv_itch5(&itch_msg);
-		if ( feof( fptr ) )return 0;
-	}
-	return 0;
+// Short names for message types
+static const char* type_name(ITCH::MessageType_t t) {
+    switch (t) {
+        case ITCH::SystemEventMessageType:                           return "SystemEvent";
+        case ITCH::StockDirectoryMessageType:                        return "StockDirectory";
+        case ITCH::StockTradingActionMessageType:                    return "StockTradingAction";
+        case ITCH::RegSHORestrictionMessageType:                     return "RegSHORestriction";
+        case ITCH::MarketParticipantPositionMessageType:             return "MarketParticipantPosition";
+        case ITCH::MWCBDeclineLevelMessageType:                      return "MWCBDeclineLevel";
+        case ITCH::MWCBStatusMessageType:                            return "MWCBStatus";
+        case ITCH::IPOQuotingPeriodUpdateMessageType:                return "IPOQuotingPeriodUpdate";
+        case ITCH::LULDAuctionCollarMessageType:                     return "LULDAuctionCollar";
+        case ITCH::OperationalHaltMessageType:                       return "OperationalHalt";
+        case ITCH::AddOrderMessageType:                              return "AddOrder";
+        case ITCH::AddOrderMPIDAttributionMessageType:               return "AddOrderMPIDAttribution";
+        case ITCH::OrderExecutedMessageType:                         return "OrderExecuted";
+        case ITCH::OrderExecutedWithPriceMessageType:                return "OrderExecutedWithPrice";
+        case ITCH::OrderCancelMessageType:                           return "OrderCancel";
+        case ITCH::OrderDeleteMessageType:                           return "OrderDelete";
+        case ITCH::OrderReplaceMessageType:                          return "OrderReplace";
+        case ITCH::TradeMessageType:                                 return "Trade";
+        case ITCH::CrossTradeMessageType:                            return "CrossTrade";
+        case ITCH::BrokenTradeMessageType:                           return "BrokenTrade";
+        case ITCH::NOIIMessageType:                                  return "NOII";
+        case ITCH::RetailInterestMessageType:                        return "RetailInterest";
+        case ITCH::DirectListingWithCapitalRaisePriceDiscoveryMessageType: return "DLCRPriceDiscovery";
+        default:                                                     return "Unknown";
+    }
 }
 
-
-size_t get_next_bin_msg(FILE *fptr, uint8_t *buff, size_t buff_len){
-	size_t ret = 0; // next message size
-	uint16_t len;
-	fread(&len, sizeof(len),1, fptr);
-	len = be16toh(len);// convert from big endian to whatever we are using
-	if ( len <= buff_len ){
-		ret = fread(buff, sizeof(uint8_t), len, fptr);
-	}
-	return ret; 
+static inline double to_dollars(uint32_t p) {
+    return static_cast<double>(p) / 10000.0;  
 }
 
-//------------------------------------------------------------------------
-// ITCH testbench
-//------------------------------------------------------------------------
+int main() {
+    try {
+        ITCH::Reader reader(INPUT_ITCH_FILE, 16384);
+
+        std::unordered_map<ITCH::MessageType_t, uint64_t> counts;
+        uint64_t total = 0;
+
+        const char* msg = nullptr;
+        while ((msg = reader.nextMessage())) {
+            // ===========================
+            //Comment in if remove prints
+            // ===========================
+            // auto t = ITCH::Parser::getDataMessageType(msg);
+            // counts[t]++;
+            // total++;
+
+            // ===========================
+            // Comment out to remove prints
+            // ===========================
+            auto t = ITCH::Parser::getDataMessageType(msg);
+            counts[t]++;
+            total++;
+
+            const auto ts = ITCH::Parser::getDataTimestamp(msg);  // uint64_t per your code
+
+            switch (t) {
+                case ITCH::AddOrderMessageType: {
+                    // struct AddOrderMessage {
+                    //   char messageType; uint16_t stockLocate; uint64_t timestamp;
+                    //   uint64_t orderReferenceNumber; char buySellIndicator;
+                    //   uint32_t shares; uint32_t price;
+                    // }
+                    const ITCH::AddOrderMessage* m = reinterpret_cast<const ITCH::AddOrderMessage*>(msg);
+                    std::cout << ts << " [AddOrder]"
+                            << " Ref="   << m->orderReferenceNumber
+                            << " Side="  << m->buySellIndicator
+                            << " Sz="    << m->shares
+                            << " Px="    << m->price << " (" << to_dollars(m->price) << ")"
+                            << "\n";
+                    break;
+                }
+
+                case ITCH::OrderCancelMessageType: {
+                    // struct OrderCancelMessage {
+                    //   char messageType; uint16_t stockLocate; uint64_t timestamp;
+                    //   uint64_t orderReferenceNumber; uint32_t cancelledShares;
+                    // }
+                    const ITCH::OrderCancelMessage* m = reinterpret_cast<const ITCH::OrderCancelMessage*>(msg);
+                    std::cout << ts << " [Cancel]"
+                            << " Ref="     << m->orderReferenceNumber
+                            << " Canceled="<< m->cancelledShares
+                            << "\n";
+                    break;
+                }
+
+                case ITCH::TradeMessageType: {
+                    // struct TradeMessage {
+                    //   char messageType; uint16_t stockLocate; uint64_t timestamp;
+                    //   uint64_t orderReferenceNumber; char buySellIndicator;
+                    //   uint32_t shares; uint32_t price;
+                    // }
+                    const ITCH::TradeMessage* m = reinterpret_cast<const ITCH::TradeMessage*>(msg);
+                    std::cout << ts << " [Trade]"
+                            << " Ref="   << m->orderReferenceNumber
+                            << " Side="  << m->buySellIndicator
+                            << " Sz="    << m->shares
+                            << " Px="    << m->price << " (" << to_dollars(m->price) << ")"
+                            << "\n";
+                    break;
+                }
+
+                default:
+                    break;
+            }
+            // ===========================
+            // End Comment out section
+            // ===========================
 
 
-#define LINE_CNT 40000
 
-int main (int argc, char **argv)
-{
-  	uint32_t n = LINE_CNT;
-	char *fpath = NULL;
- 	int c;
-	int err;
-	FILE *fptr;
-	
+        }
 
+        std::cout << "Parsed file: " << INPUT_ITCH_FILE << "\n";
+        std::cout << "Total messages: " << total << "\n";
+        std::cout << "Total bytes read: " << reader.getTotalBytesRead() << "\n\n";
 
-	while ((c = getopt (argc, argv, "n:f:")) != -1)
-	{
-		switch (c)
- 		{
- 		case 'n':
-			n = (uint32_t)atoi(optarg);
-			break;
- 		case 'f':
-			fpath = optarg;
- 			break;
- 		case '?':
-			if (isprint (optopt))fprintf (stderr, "Unknown option `-%c'.\n", optopt);
-			else fprintf (stderr,"Unknown option character `\\x%x'.\n",optopt);
-				return 1;
-		default: abort ();
- 		}
-	}
+        for (auto& kv : counts) {
+            std::cout << type_name(kv.first) << ": " << kv.second << "\n";
+        }
 
-	if ( fpath == NULL ){
-		fprintf(stderr, "Missing file path, option -f\n");
-		return 1;
-	}
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return 1;
+    }
 
-	// open file
-	fptr = fopen(fpath,"rb");
-	if ( fptr != NULL ){
-		err = read_bin_file(fptr, n);
-		fclose(fptr);
-	}else {
-		fprintf(stderr,"File open failed\n");
-		return 1;
-	}
-	return err;
+    return 0;
 }

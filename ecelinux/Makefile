@@ -21,7 +21,7 @@ TCL_SCRIPT=run.tcl
 
 all: csim
 
-itch: itch.cpp itch_test.cpp
+itch: itch_test.cpp itch_reader.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
 result/itch_csim.txt: itch
