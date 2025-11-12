@@ -40,55 +40,57 @@ constexpr MessageType_t NOIIMessageType                      = 'I';
 constexpr MessageType_t RetailInterestMessageType            = 'N';
 constexpr MessageType_t DirectListingWithCapitalRaisePriceDiscoveryMessageType = 'O';
 
-template<char MessageType> constexpr char * TypeTag = MessageType + "  ";
-template <> constexpr char const * TypeTag<SystemEventMessageType>               = "SYS";
-template <> constexpr char const * TypeTag<StockDirectoryMessageType>            = "DIR";
-template <> constexpr char const * TypeTag<StockTradingActionMessageType>        = "ACT";
-template <> constexpr char const * TypeTag<RegSHORestrictionMessageType>         = "REG";
-template <> constexpr char const * TypeTag<MarketParticipantPositionMessageType> = "POS";
-template <> constexpr char const * TypeTag<MWCBDeclineLevelMessageType>          = "DCL";
-template <> constexpr char const * TypeTag<MWCBStatusMessageType>                = "STS";
-template <> constexpr char const * TypeTag<IPOQuotingPeriodUpdateMessageType>    = "IPO";
-template <> constexpr char const * TypeTag<LULDAuctionCollarMessageType>         = "COL";
-template <> constexpr char const * TypeTag<OperationalHaltMessageType>           = "HLT";
-template <> constexpr char const * TypeTag<AddOrderMessageType>                  = "ADD";
-template <> constexpr char const * TypeTag<AddOrderMPIDAttributionMessageType>   = "ADM";
-template <> constexpr char const * TypeTag<OrderExecutedMessageType>             = "EXC";
-template <> constexpr char const * TypeTag<OrderExecutedWithPriceMessageType>    = "EXP";
-template <> constexpr char const * TypeTag<OrderCancelMessageType>               = "CNL";
-template <> constexpr char const * TypeTag<OrderDeleteMessageType>               = "DEL";
-template <> constexpr char const * TypeTag<OrderReplaceMessageType>              = "RPL";
-template <> constexpr char const * TypeTag<TradeMessageType>                     = "TRD";
-template <> constexpr char const * TypeTag<CrossTradeMessageType>                = "CRX";
-template <> constexpr char const * TypeTag<BrokenTradeMessageType>               = "BRK";
-template <> constexpr char const * TypeTag<NOIIMessageType>                      = "NOI";
-template <> constexpr char const * TypeTag<RetailInterestMessageType>            = "RTL";
-template <> constexpr char const * TypeTag<DirectListingWithCapitalRaisePriceDiscoveryMessageType> = "DSC";
+// TypeTag
+template<char M> inline const char* TypeTag() { return "UNK"; }
+template<> inline const char* TypeTag<SystemEventMessageType>()               { return "SYS"; }
+template<> inline const char* TypeTag<StockDirectoryMessageType>()            { return "DIR"; }
+template<> inline const char* TypeTag<StockTradingActionMessageType>()        { return "ACT"; }
+template<> inline const char* TypeTag<RegSHORestrictionMessageType>()         { return "REG"; }
+template<> inline const char* TypeTag<MarketParticipantPositionMessageType>() { return "POS"; }
+template<> inline const char* TypeTag<MWCBDeclineLevelMessageType>()          { return "DCL"; }
+template<> inline const char* TypeTag<MWCBStatusMessageType>()                { return "STS"; }
+template<> inline const char* TypeTag<IPOQuotingPeriodUpdateMessageType>()    { return "IPO"; }
+template<> inline const char* TypeTag<LULDAuctionCollarMessageType>()         { return "COL"; }
+template<> inline const char* TypeTag<OperationalHaltMessageType>()           { return "HLT"; }
+template<> inline const char* TypeTag<AddOrderMessageType>()                  { return "ADD"; }
+template<> inline const char* TypeTag<AddOrderMPIDAttributionMessageType>()   { return "ADM"; }
+template<> inline const char* TypeTag<OrderExecutedMessageType>()             { return "EXC"; }
+template<> inline const char* TypeTag<OrderExecutedWithPriceMessageType>()    { return "EXP"; }
+template<> inline const char* TypeTag<OrderCancelMessageType>()               { return "CNL"; }
+template<> inline const char* TypeTag<OrderDeleteMessageType>()               { return "DEL"; }
+template<> inline const char* TypeTag<OrderReplaceMessageType>()              { return "RPL"; }
+template<> inline const char* TypeTag<TradeMessageType>()                     { return "TRD"; }
+template<> inline const char* TypeTag<CrossTradeMessageType>()                { return "CRX"; }
+template<> inline const char* TypeTag<BrokenTradeMessageType>()               { return "BRK"; }
+template<> inline const char* TypeTag<NOIIMessageType>()                      { return "NOI"; }
+template<> inline const char* TypeTag<RetailInterestMessageType>()            { return "RTL"; }
+template<> inline const char* TypeTag<DirectListingWithCapitalRaisePriceDiscoveryMessageType>() { return "DSC"; }
 
-template<char MessageType> constexpr uint16_t MessageLength = -1;
-template <> constexpr uint16_t MessageLength<SystemEventMessageType>                = 12;
-template <> constexpr uint16_t MessageLength<StockDirectoryMessageType>             = 39;
-template <> constexpr uint16_t MessageLength<StockTradingActionMessageType>         = 25;
-template <> constexpr uint16_t MessageLength<RegSHORestrictionMessageType>          = 20;
-template <> constexpr uint16_t MessageLength<MarketParticipantPositionMessageType>  = 26;
-template <> constexpr uint16_t MessageLength<MWCBDeclineLevelMessageType>           = 35;
-template <> constexpr uint16_t MessageLength<MWCBStatusMessageType>                 = 12;
-template <> constexpr uint16_t MessageLength<IPOQuotingPeriodUpdateMessageType>     = 28;
-template <> constexpr uint16_t MessageLength<LULDAuctionCollarMessageType>          = 35;
-template <> constexpr uint16_t MessageLength<OperationalHaltMessageType>            = 21;
-template <> constexpr uint16_t MessageLength<AddOrderMessageType>                   = 36;
-template <> constexpr uint16_t MessageLength<AddOrderMPIDAttributionMessageType>    = 40;
-template <> constexpr uint16_t MessageLength<OrderExecutedMessageType>              = 31;
-template <> constexpr uint16_t MessageLength<OrderExecutedWithPriceMessageType>     = 36;
-template <> constexpr uint16_t MessageLength<OrderCancelMessageType>                = 23;
-template <> constexpr uint16_t MessageLength<OrderDeleteMessageType>                = 19;
-template <> constexpr uint16_t MessageLength<OrderReplaceMessageType>               = 35;
-template <> constexpr uint16_t MessageLength<TradeMessageType>                      = 44;
-template <> constexpr uint16_t MessageLength<CrossTradeMessageType>                 = 40;
-template <> constexpr uint16_t MessageLength<BrokenTradeMessageType>                = 19;
-template <> constexpr uint16_t MessageLength<NOIIMessageType>                       = 50;
-template <> constexpr uint16_t MessageLength<RetailInterestMessageType>             = 20;
-template <> constexpr uint16_t MessageLength<DirectListingWithCapitalRaisePriceDiscoveryMessageType> = 48;
+// MessageLength
+template<char M> inline uint16_t MessageLength() { return 0xFFFF; }
+template<> inline uint16_t MessageLength<SystemEventMessageType>()                { return 12; }
+template<> inline uint16_t MessageLength<StockDirectoryMessageType>()             { return 39; }
+template<> inline uint16_t MessageLength<StockTradingActionMessageType>()         { return 25; }
+template<> inline uint16_t MessageLength<RegSHORestrictionMessageType>()          { return 20; }
+template<> inline uint16_t MessageLength<MarketParticipantPositionMessageType>()  { return 26; }
+template<> inline uint16_t MessageLength<MWCBDeclineLevelMessageType>()           { return 35; }
+template<> inline uint16_t MessageLength<MWCBStatusMessageType>()                 { return 12; }
+template<> inline uint16_t MessageLength<IPOQuotingPeriodUpdateMessageType>()     { return 28; }
+template<> inline uint16_t MessageLength<LULDAuctionCollarMessageType>()          { return 35; }
+template<> inline uint16_t MessageLength<OperationalHaltMessageType>()            { return 21; }
+template<> inline uint16_t MessageLength<AddOrderMessageType>()                   { return 36; }
+template<> inline uint16_t MessageLength<AddOrderMPIDAttributionMessageType>()    { return 40; }
+template<> inline uint16_t MessageLength<OrderExecutedMessageType>()              { return 31; }
+template<> inline uint16_t MessageLength<OrderExecutedWithPriceMessageType>()     { return 36; }
+template<> inline uint16_t MessageLength<OrderCancelMessageType>()                { return 23; }
+template<> inline uint16_t MessageLength<OrderDeleteMessageType>()                { return 19; }
+template<> inline uint16_t MessageLength<OrderReplaceMessageType>()               { return 35; }
+template<> inline uint16_t MessageLength<TradeMessageType>()                      { return 44; }
+template<> inline uint16_t MessageLength<CrossTradeMessageType>()                 { return 40; }
+template<> inline uint16_t MessageLength<BrokenTradeMessageType>()                { return 19; }
+template<> inline uint16_t MessageLength<NOIIMessageType>()                       { return 50; }
+template<> inline uint16_t MessageLength<RetailInterestMessageType>()             { return 20; }
+template<> inline uint16_t MessageLength<DirectListingWithCapitalRaisePriceDiscoveryMessageType>() { return 48; }
 
 struct SystemEventMessage {
     char        messageType;

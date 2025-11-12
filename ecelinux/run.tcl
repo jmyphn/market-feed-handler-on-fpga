@@ -4,7 +4,7 @@
 # @brief: A Tcl script for synthesizing the baseline digit recongnition design.
 
 # Project name
-set hls_prj itch_decoder.prj
+set hls_prj itch.prj
 
 # Open/reset the project
 open_project ${hls_prj} -reset

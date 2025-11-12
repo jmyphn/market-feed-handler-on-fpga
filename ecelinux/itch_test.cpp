@@ -7,7 +7,7 @@
 #include <iostream>
 #include <unordered_map>
 
-static const char* INPUT_ITCH_FILE = "./data/itch_data";
+static const char* INPUT_ITCH_FILE = "./data/tvagg";
 
 // Short names for message types
 static const char* type_name(ITCH::MessageType_t t) {
@@ -40,7 +40,7 @@ static const char* type_name(ITCH::MessageType_t t) {
 }
 
 static inline double to_dollars(uint32_t p) {
-    return static_cast<double>(p) / 10000.0;  
+    return static_cast<double>(p) / 10000.0;  // adjust if your scale differs
 }
 
 int main() {
@@ -52,74 +52,67 @@ int main() {
 
         const char* msg = nullptr;
         while ((msg = reader.nextMessage())) {
-            // ===========================
-            //Comment in if remove prints
-            // ===========================
-            // auto t = ITCH::Parser::getDataMessageType(msg);
-            // counts[t]++;
-            // total++;
-
-            // ===========================
-            // Comment out to remove prints
-            // ===========================
             auto t = ITCH::Parser::getDataMessageType(msg);
             counts[t]++;
             total++;
 
-            const auto ts = ITCH::Parser::getDataTimestamp(msg);  // uint64_t per your code
+            // ===========================================
+            // Uncomment to print decoded version
+            // ===========================================
+            // const auto ts = ITCH::Parser::getDataTimestamp(msg);  // uint64_t per your code
 
-            switch (t) {
-                case ITCH::AddOrderMessageType: {
-                    // struct AddOrderMessage {
-                    //   char messageType; uint16_t stockLocate; uint64_t timestamp;
-                    //   uint64_t orderReferenceNumber; char buySellIndicator;
-                    //   uint32_t shares; uint32_t price;
-                    // }
-                    const ITCH::AddOrderMessage* m = reinterpret_cast<const ITCH::AddOrderMessage*>(msg);
-                    std::cout << ts << " [AddOrder]"
-                            << " Ref="   << m->orderReferenceNumber
-                            << " Side="  << m->buySellIndicator
-                            << " Sz="    << m->shares
-                            << " Px="    << m->price << " (" << to_dollars(m->price) << ")"
-                            << "\n";
-                    break;
-                }
+            // switch (t) {
+            //     case ITCH::AddOrderMessageType: {
+            //         // struct AddOrderMessage {
+            //         //   char messageType; uint16_t stockLocate; uint64_t timestamp;
+            //         //   uint64_t orderReferenceNumber; char buySellIndicator;
+            //         //   uint32_t shares; uint32_t price;
+            //         // }
+            //         const ITCH::AddOrderMessage* m = reinterpret_cast<const ITCH::AddOrderMessage*>(msg);
+            //         std::cout << ts << " [AddOrder]"
+            //                 << " Ref="   << m->orderReferenceNumber
+            //                 << " Side="  << m->buySellIndicator
+            //                 << " Sz="    << m->shares
+            //                 << " Px="    << m->price << " (" << to_dollars(m->price) << ")"
+            //                 << "\n";
+            //         break;
+            //     }
 
-                case ITCH::OrderCancelMessageType: {
-                    // struct OrderCancelMessage {
-                    //   char messageType; uint16_t stockLocate; uint64_t timestamp;
-                    //   uint64_t orderReferenceNumber; uint32_t cancelledShares;
-                    // }
-                    const ITCH::OrderCancelMessage* m = reinterpret_cast<const ITCH::OrderCancelMessage*>(msg);
-                    std::cout << ts << " [Cancel]"
-                            << " Ref="     << m->orderReferenceNumber
-                            << " Canceled="<< m->cancelledShares
-                            << "\n";
-                    break;
-                }
+            //     case ITCH::OrderCancelMessageType: {
+            //         // struct OrderCancelMessage {
+            //         //   char messageType; uint16_t stockLocate; uint64_t timestamp;
+            //         //   uint64_t orderReferenceNumber; uint32_t cancelledShares;
+            //         // }
+            //         const ITCH::OrderCancelMessage* m = reinterpret_cast<const ITCH::OrderCancelMessage*>(msg);
+            //         std::cout << ts << " [Cancel]"
+            //                 << " Ref="     << m->orderReferenceNumber
+            //                 << " Canceled="<< m->cancelledShares
+            //                 << "\n";
+            //         break;
+            //     }
 
-                case ITCH::TradeMessageType: {
-                    // struct TradeMessage {
-                    //   char messageType; uint16_t stockLocate; uint64_t timestamp;
-                    //   uint64_t orderReferenceNumber; char buySellIndicator;
-                    //   uint32_t shares; uint32_t price;
-                    // }
-                    const ITCH::TradeMessage* m = reinterpret_cast<const ITCH::TradeMessage*>(msg);
-                    std::cout << ts << " [Trade]"
-                            << " Ref="   << m->orderReferenceNumber
-                            << " Side="  << m->buySellIndicator
-                            << " Sz="    << m->shares
-                            << " Px="    << m->price << " (" << to_dollars(m->price) << ")"
-                            << "\n";
-                    break;
-                }
+            //     case ITCH::TradeMessageType: {
+            //         // struct TradeMessage {
+            //         //   char messageType; uint16_t stockLocate; uint64_t timestamp;
+            //         //   uint64_t orderReferenceNumber; char buySellIndicator;
+            //         //   uint32_t shares; uint32_t price;
+            //         // }
+            //         const ITCH::TradeMessage* m = reinterpret_cast<const ITCH::TradeMessage*>(msg);
+            //         std::cout << ts << " [Trade]"
+            //                 << " Ref="   << m->orderReferenceNumber
+            //                 << " Side="  << m->buySellIndicator
+            //                 << " Sz="    << m->shares
+            //                 << " Px="    << m->price << " (" << to_dollars(m->price) << ")"
+            //                 << "\n";
+            //         break;
+            //     }
 
-                default:
-                    break;
-            }
-            // ===========================
-            // End Comment out section
-            // ===========================
+            //     // Add other message types here, matching names in itch_common.hpp
+
+            //     default:
+            //         break;
+            // }
+
 
 
 
