@@ -154,7 +154,8 @@ inline SystemEventMessage createSystemEventMessage(const char* data) {
   char      messageType = *data;
   uint16_t  stockLocate = be16toh(*(uint16_t*)(data + 1));
   uint64_t  timestamp   = be64toh(*(uint64_t*)(data + 5)) >> 16;
-  return {messageType, stockLocate, timestamp};
+//   return {messageType, stockLocate, timestamp};
+return { messageType, stockLocate, 0, timestamp, 0 };
 }
 
 inline StockDirectoryMessage createStockDirectoryMessage(const char* data) {

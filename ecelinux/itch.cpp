@@ -4,9 +4,9 @@
 #define MAX_MESSAGE_SIZE 512
 
 void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
-#pragma HLS INTERFACE axis port=strm_in
-#pragma HLS INTERFACE axis port=strm_out
-#pragma HLS PIPELINE off
+    #pragma HLS INTERFACE axis port=strm_in
+    #pragma HLS INTERFACE axis port=strm_out
+    #pragma HLS PIPELINE off
 
     
     bit32_t hdr = strm_in.read();                
@@ -14,9 +14,9 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     if (msg_len > MAX_MESSAGE_SIZE) msg_len = MAX_MESSAGE_SIZE;  
 
     char buffer[MAX_MESSAGE_SIZE];
-#pragma HLS ARRAY_PARTITION variable=buffer complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=buffer complete dim=1
     for (int i = 0; i < msg_len; i++) {
-#pragma HLS PIPELINE II=1
+        #pragma HLS PIPELINE II=1
         bit32_t bw = strm_in.read();                
         buffer[i] = (char)bw(7, 0);
     }

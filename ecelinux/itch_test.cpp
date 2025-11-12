@@ -72,6 +72,8 @@ int main() {
             out_stream.read(); 
         }
 
+
+
         // Summary only
         std::cout << "Parsed file: " << INPUT_ITCH_FILE << "\n";
         std::cout << "Total messages: " << total << "\n";

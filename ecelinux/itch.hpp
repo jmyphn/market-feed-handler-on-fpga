@@ -5,7 +5,7 @@
 
 #ifndef ITCH_H
 #define ITCH_H
-#include "itch_reader.hpp"
+// #include "itch_reader.hpp"
 #include "itch_common.hpp"
 #include "typedefs.h"
 #include <hls_stream.h>
