@@ -13,7 +13,7 @@ open_project ${hls_prj} -reset
 set_top dut
 
 # Add design and testbench files
-add_files itch.cpp -cflags "-std=c++11"
+add_files itch_reader.cpp -cflags "-std=c++11"
 add_files -tb itch_test.cpp -cflags "-std=c++11"
 add_files -tb data
 

@@ -38,7 +38,6 @@ typedef char char_8_t[8];
 typedef char char_10_t[10] ;
 typedef char char_20_t[20] ;
 
-#include "gen/itch_msg_enum.h"
 #endif // TYPE_H
 
 #endif
