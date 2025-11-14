@@ -11,6 +11,21 @@
 #include <hls_stream.h>
 #include <cstdint>
 
+#define MAX_MESSAGE_SIZE 64
+
+struct ParsedMessage {
+    ap_uint<8>  type;
+    ap_uint<8>  side;
+    ap_uint<64> order_id;
+    ap_uint<64> new_order_id;
+    ap_uint<32> shares;
+    ap_uint<32> price;
+};
+
+// Top function for synthesis
 void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out);
+
+// Top function for parser
+ParsedMessage parser(char buffer[MAX_MESSAGE_SIZE]);
 
 #endif

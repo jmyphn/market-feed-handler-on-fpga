@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <endian.h>   
 
-static const char* INPUT_ITCH_FILE = "./data/tvagg";
+static const char* INPUT_ITCH_FILE = "./data/filtered_data";
 
 static const char* type_name(ITCH::MessageType_t t) {
     switch (t) {
