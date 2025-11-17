@@ -32,6 +32,19 @@ result/itch_csim.txt: itch
 csim: result/itch_csim.txt
 	@echo "Result recorded to $<"
 
+bs.exe: blackscholes_test.cpp blackscholes.cpp
+	g++ ${CFLAGS} $^ -o $@ -lrt
+
+.PHONY: bs
+bs: bs.exe
+	@echo "Running Black–Scholes sim..."
+	mkdir -p result
+	./bs.exe | tee result/bs_csim.txt
+
+
+csim_bs: result/bs_csim.txt
+	@echo "Result recorded to $<"
+
 xillydemo.bit:
 	@echo "================================================================="
 	@echo "Synthesizing itch and creating bitstream with $(TCL_SCRIPT)..."
@@ -43,5 +56,5 @@ bitstream: xillydemo.bit
 	@echo "Bitstream saved to $<"
 
 clean:
-	rm -rf itch *.dat *.prj *.log
+	rm -rf itch bs *.dat *.prj *.log
 	rm -rf zedboard_project* xillydemo.bit
