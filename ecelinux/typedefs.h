@@ -6,9 +6,18 @@
 #ifndef TYPEDEFS
 #define TYPEDEFS
 
-#include <ap_fixed.h>
+#include <ap_int.h>
 
 typedef bool bit;
-ap_ufixed<16, 8> price4; // TODO: need to compute real bit-widths
+typedef ap_uint<32> bit32_t;
+
+struct ParsedMessage {
+    ap_uint<8>  type;
+    ap_uint<8>  side;
+    ap_uint<64> order_id;
+    ap_uint<64> new_order_id;
+    ap_uint<32> shares;
+    ap_uint<32> price;
+};
 
 #endif

@@ -13,12 +13,12 @@ VHLS_INC=$(XILINX_VIVADO)/include
 # Specify compilation flags
 CFLAGS=-g -I${VHLS_INC}
 
-.PHONY: all csim clean
+.PHONY: all orderbook_csim clean
 
-all: csim
+all: orderbook_csim
 
 # TODO: need to update
-orderbook: priority_queue.cpp tb.cpp
+orderbook: priority_queue.cpp orderbook.cpp orderbook_tb.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
 result/orderbook_csim.txt: orderbook
@@ -27,7 +27,7 @@ result/orderbook_csim.txt: orderbook
 	./$< | tee $@
 
 
-csim: result/orderbook_csim.txt
+orderbook_csim: result/orderbook_csim.txt
 	@echo "Result reorded to $<"
 
 clean:
