@@ -1,10 +1,7 @@
-Parsed file: ./data/filtered_data
-Total messages: 1000000
-Total bytes read: 29249006
+Parsed file: ./data/filtered_data_500
+Total messages: 500
+Total bytes read: 18931
 
-OrderExecuted: 1071
-OrderCancel: 148370
-OrderReplace: 47905
-AddOrder: 404482
-OrderDelete: 398172
-WARNING: Hls::stream 'hls::stream<ap_uint<32> >.2' contains leftover data, which may result in RTL simulation hanging.
+OrderReplace: 1
+AddOrder: 495
+OrderDelete: 4

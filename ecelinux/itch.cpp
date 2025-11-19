@@ -11,40 +11,54 @@
 //----------------------------------------------------------
 
 void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
-    #pragma HLS INTERFACE axis port=strm_in
-    #pragma HLS INTERFACE axis port=strm_out
-    #pragma HLS PIPELINE off
+    // #pragma HLS INTERFACE axis port=strm_in
+    // #pragma HLS INTERFACE axis port=strm_out
+    // #pragma HLS PIPELINE off
 
     // ------------------------------------------------------
     // Input processing
     // ------------------------------------------------------    
     bit32_t hdr = strm_in.read();                
     uint16_t msg_len = (uint16_t)hdr(15, 0);
-    if (msg_len > MAX_MESSAGE_SIZE) msg_len = MAX_MESSAGE_SIZE;  
 
-    char buffer[MAX_MESSAGE_SIZE];
+
+    char in_buffer[MAX_MESSAGE_SIZE];   // 36 bytes
+    int idx = 0;
+    int words = (msg_len + 3) >> 2;     // # of 32-bit words = ceil(msg_len/4)
     
-    // #pragma HLS ARRAY_PARTITION variable=buffer complete dim=1
-    for (int i = 0; i < msg_len; i++) {
+    // #pragma HLS ARRAY_PARTITION variable=in_buffer complete dim=1
+    for (int w = 0; w < words; w++) {
         // #pragma HLS PIPELINE II=1
-        bit32_t bw = strm_in.read();                
-        buffer[i] = (char)bw(7, 0);
+        bit32_t word = strm_in.read();
+        if (idx < msg_len) in_buffer[idx++] = (char)word(7, 0);
+        if (idx < msg_len) in_buffer[idx++] = (char)word(15, 8);
+        if (idx < msg_len) in_buffer[idx++] = (char)word(23, 16);
+        if (idx < msg_len) in_buffer[idx++] = (char)word(31, 24);
     }
+
+    // Print reconstructed message (for debugging)
+    // std::cout << "DUT's reconstructed msg:      ";
+    // for (int i = 0; i < msg_len; i++) {
+    //     // Cast to unsigned int to print the byte as a number
+    //     std::cout << std::hex << std::setw(2) << std::setfill('0') 
+    //             << static_cast<unsigned int>(static_cast<unsigned char>(in_buffer[i])) 
+    //             << " ";
+    // }
+    // std::cout << std::dec << std::endl; // reset to decimal
 
     // ------------------------------------------------------
     // Call Parser 
     // ------------------------------------------------------
-    ParsedMessage parsed = parser(buffer);
+    ParsedMessage parsed = parser(in_buffer);
 
     // ------------------------------------------------------
     // Output processing
     // ------------------------------------------------------
-    // combine type & side in 1 output word
     bit32_t w0 = 0;
     w0(7,0)   = parsed.type;
     w0(15,8)  = parsed.side;
+    w0 = parsed.order_id;
     strm_out.write(w0);
-
     strm_out.write((bit32_t)parsed.order_id.range(31,0));
     strm_out.write((bit32_t)parsed.order_id.range(63,32));
     strm_out.write((bit32_t)parsed.new_order_id.range(31,0));
@@ -56,10 +70,10 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
 //----------------------------------------------------------
 // Parser
 //----------------------------------------------------------
-// @param[in] : buffer - the ITCH message 
+// @param[in] : in_buffer - the ITCH message 
 // @return : the parsed message struct
 
-ParsedMessage parser(char buffer[MAX_MESSAGE_SIZE]) {
+ParsedMessage parser(char* buffer) {
     
     // Initialize the ParsedMessage struct
     ParsedMessage output;

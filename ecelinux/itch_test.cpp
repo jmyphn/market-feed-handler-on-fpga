@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <endian.h>   
 
-static const char* INPUT_ITCH_FILE = "./data/filtered_data";
+static const char* INPUT_ITCH_FILE = "./data/filtered_data_500";
 
 static const char* type_name(ITCH::MessageType_t t) {
     switch (t) {
@@ -58,21 +58,39 @@ int main() {
             uint16_t net_len = *(const uint16_t*)(msg);
             uint16_t msg_len = be16toh(net_len);
             const unsigned char* payload = reinterpret_cast<const unsigned char*>(msg + 2);
+            
+            // Print message details (for debugging)
+            // std::cout << "Type: " << t << ", Length: " << msg_len << ", Payload: ";
+            // for (int i = 0; i < msg_len; i++) {
+            //     std::cout << std::hex << std::setw(2) << std::setfill('0')
+            //             << static_cast<unsigned int>(static_cast<unsigned char>(payload[i]))
+            //             << " ";
+            // }
+            // std::cout << std::dec << std::endl; // reset back to decimal
 
             bit32_t hdr = 0; hdr(15, 0) = msg_len;
             in_stream.write(hdr);
-
-            for (int i = 0; i < msg_len; i++) {
+            
+            // Pack 4 bytes per stream word
+            for (int i = 0; i < msg_len; i+=4) {
                 bit32_t w = 0;
-                w(7, 0) = payload[i];
+                w(7, 0)     = payload[i];
+                w(15, 8)    = (i+1 < msg_len) ? payload[i+1] : 0;
+                w(23, 16)   = (i+2 < msg_len) ? payload[i+2] : 0;
+                w(31, 24)   = (i+3 < msg_len) ? payload[i+3] : 0;
                 in_stream.write(w);
             }
             dut(in_stream, out_stream);
             
-            out_stream.read(); 
+            // Read all 7 words to drain the stream
+            // std::cout << "--> ";
+            for (int i = 0; i < 7; i++) {
+                bit32_t out_word = out_stream.read();
+            //     std::cout << std::hex << std::setw(8) << std::setfill('0')
+            //             << static_cast<unsigned int>(out_word) << " ";
+            }
+            // std::cout << std::dec << "\n\n"; // reset back to decimal
         }
-
-
 
         // Summary only
         std::cout << "Parsed file: " << INPUT_ITCH_FILE << "\n";

@@ -11,7 +11,7 @@
 #include <hls_stream.h>
 #include <cstdint>
 
-#define MAX_MESSAGE_SIZE 64
+#define MAX_MESSAGE_SIZE 36
 
 struct ParsedMessage {
     ap_uint<8>  type;
@@ -26,6 +26,6 @@ struct ParsedMessage {
 void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out);
 
 // Top function for parser
-ParsedMessage parser(char buffer[MAX_MESSAGE_SIZE]);
+ParsedMessage parser(char* buffer);
 
 #endif
