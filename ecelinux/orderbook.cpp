@@ -32,11 +32,10 @@ void balance(priority_queue &pq, hash_tbl tbl) {
     if (top_entry->value >= 0) {
       break;
     } else {
-      // remove from priority queue
+      // remove from hash table
       top_entry->value = 0;
       top_entry->state = TOMBSTONE;
       pq_pop(pq);
-      // TODO: remove from hashtable
     }
   }
 }

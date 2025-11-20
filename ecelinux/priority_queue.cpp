@@ -2,7 +2,7 @@
 #include "typedefs.h"
 
 #if ASSERT
-  #include <cassert>
+#include <cassert>
 #endif
 
 /*
@@ -12,9 +12,9 @@
  */
 int parent_idx(int idx) {
 #pragma hls inline
-  #if ASSERT
-    assert(idx > 0);
-  #endif
+#if ASSERT
+  assert(idx > 0);
+#endif
   return (idx - 1) >> 1;
 }
 
@@ -33,7 +33,7 @@ int level_of_idx(int idx) {
   // TODO
   ++idx;
   int level = 0;
-  while (idx >>= 1) {  // keep shifting until zero
+  while (idx >>= 1) { // keep shifting until zero
     ++level;
   }
   return level;
@@ -42,16 +42,15 @@ int level_of_idx(int idx) {
 bool cmp(ParsedMessage &o1, ParsedMessage &o2) {
 #pragma hls inline
   if (o1.price != o2.price) {
-    if (o1.side == 'b')  // if it's bid, higher price is better
+    if (o1.side == 'b') // if it's bid, higher price is better
       return o1.price > o2.price;
-    else  // for asks, lower price is better
+    else // for asks, lower price is better
       return o1.price < o2.price;
   }
   return o1.order_id < o2.order_id;
 }
 
-
-ParsedMessage& pq_top(priority_queue &pq) {
+ParsedMessage &pq_top(priority_queue &pq) {
 #pragma hls inline
   return pq.heap[0];
 }
@@ -64,12 +63,35 @@ void pq_push(priority_queue &pq, ParsedMessage &order) {
     if (cmp(order, pq.heap[parent])) {
       std::cerr << "SWAPPING\n";
       std::swap(pq.heap[pq.size], pq.heap[parent]);
-    }
-    else break;
+    } else
+      break;
   }
   pq.size++;
 }
 
 void pq_pop(priority_queue &pq) {
+#if ASSERT
+  assert(pq.size > 0);
+#endif
 
+  --pq.size;
+  std::swap(pq.heap[0], pq.heap[pq.size]);
+  int curr = 0;
+  while (curr < pq.size) {
+    int l = 2 * curr + 1;
+    int r = 2 * curr + 2;
+    if (cmp(pq.heap[l], pq.heap[r])) {
+      if (cmp(pq.heap[l], pq.heap[curr])) {
+        std::swap(pq.heap[l], pq.heap[curr]);
+        curr = l;
+      } else
+        break;
+    } else {
+      if (cmp(pq.heap[r], pq.heap[curr])) {
+        std::swap(pq.heap[r], pq.heap[curr]);
+        curr = r;
+      } else
+        break;
+    }
+  }
 }
