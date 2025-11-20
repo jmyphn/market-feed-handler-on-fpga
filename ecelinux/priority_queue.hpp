@@ -1,8 +1,5 @@
 #include "typedefs.h"
 
-#define CAPACITY 4  // TODO: inc this to 4096 later, keep small now for testing
-#define ASSERT true
-
 /*
  * Simple implementation of priority queue using an array.
  *
@@ -26,10 +23,4 @@ ParsedMessage& pq_top(priority_queue &pq);
  */
 void pq_push(priority_queue &pq, ParsedMessage &order);
 
-/*
- * If pq is at max size, remove an arbitrary element that's not the biggest.
- * POST: pq is not at full capacity
- */
-void keep_slim(priority_queue &pq);
-
-void balance(priority_queue &pq, priority_queue &remove_pq);
+void pq_pop(priority_queue &pq);

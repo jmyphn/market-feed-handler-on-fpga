@@ -18,7 +18,7 @@ CFLAGS=-g -I${VHLS_INC}
 all: orderbook_csim
 
 # TODO: need to update
-orderbook: priority_queue.cpp orderbook.cpp orderbook_tb.cpp
+orderbook: hash_tbl.cpp priority_queue.cpp orderbook.cpp orderbook_tb.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
 result/orderbook_csim.txt: orderbook

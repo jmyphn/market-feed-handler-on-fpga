@@ -70,15 +70,6 @@ void pq_push(priority_queue &pq, ParsedMessage &order) {
   pq.size++;
 }
 
-/*
- * If pq is at max size, remove an arbitrary element that's not the biggest.
- * POST: pq is not at full capacity
- */
-void keep_slim(priority_queue &pq) {
-#pragma hls inline
-  if (pq.size == CAPACITY - 1) --pq.size;
-}
+void pq_pop(priority_queue &pq) {
 
-void balance(priority_queue &pq, priority_queue &remove_pq) {
-  // TODO
 }
