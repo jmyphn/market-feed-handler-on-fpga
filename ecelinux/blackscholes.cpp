@@ -2,10 +2,10 @@
 #include <cmath>
 #include "blackscholes.hpp"
 
-theta_type K = 100.0f;    // Strike price
-theta_type r = 0.05f;     // Risk-free rate (5%)
-theta_type v = 0.2f;      // Volatility of the underlying (20%)
-theta_type T = 1.0f;      // One year until expiry
+theta_type K = 100.0f; // Strike price
+theta_type r = 0.05f;  // Risk-free rate 
+theta_type v = 0.2f;   // Volatility of the underlying 
+theta_type T = 1.0f;   // One year until expiry
 
 template <typename T>
 T custom_log(const T& x)
@@ -57,8 +57,7 @@ static theta_type normal_cdf(theta_type x)
 // ---------------------------------------------------------------------
 // Black–Scholes pricing 
 // ---------------------------------------------------------------------
-void black_scholes_price(theta_type S_in, result_type &result)
-{
+void black_scholes_price(theta_type S_in, result_type &result){
   if (S_in <= 0 || K <= 0 || v <= 0 || T <= 0) {
     result.call = 0.0f;
     result.put  = 0.0f;
@@ -66,7 +65,7 @@ void black_scholes_price(theta_type S_in, result_type &result)
   }
 
   theta_type sigma   = v;
-  theta_type sqrtT   = std::sqrt(T);   // <-- cmath version
+  theta_type sqrtT   = std::sqrt(T); 
   theta_type S_over_K = S_in / K;
 
   theta_type log_S_over_K = custom_log<theta_type>(S_over_K);
@@ -89,13 +88,8 @@ void black_scholes_price(theta_type S_in, result_type &result)
   result.put  = K * discount * Nminus_d2 - S_in * Nminus_d1;
 }
 
-void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out)
-{
-#pragma HLS INTERFACE axis port=strm_in
-#pragma HLS INTERFACE axis port=strm_out
-#pragma HLS INTERFACE ap_ctrl_none port=return
-
-  // Read spot price bits from input stream
+void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
+  // Read spot price from input stream
   bit32_t in_bits = strm_in.read();
 
   union {
@@ -120,7 +114,7 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out)
   bit32_t icall = static_cast<bit32_t>(ucall.ival);
   bit32_t iput  = static_cast<bit32_t>(uput.ival);
 
-  // Write output to stream (call then put)
+  // Write output to stream (call, put)
   strm_out.write(icall);
   strm_out.write(iput);
 }
