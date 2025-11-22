@@ -1,0 +1,7 @@
+Parsed file: ./data/filtered_data_500
+Total messages: 500
+Total bytes read: 18931
+
+OrderReplace: 1
+AddOrder: 495
+OrderDelete: 4
