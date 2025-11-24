@@ -9,12 +9,7 @@
 //----------------------------------------------------------
 // Top function
 //----------------------------------------------------------
-
 void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
-    // #pragma HLS INTERFACE axis port=strm_in
-    // #pragma HLS INTERFACE axis port=strm_out
-    // #pragma HLS PIPELINE off
-
     // ------------------------------------------------------
     // Input processing
     // ------------------------------------------------------    
@@ -26,14 +21,16 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     int idx = 0;
     int words = (msg_len + 3) >> 2;     // # of 32-bit words = ceil(msg_len/4)
     
-    // #pragma HLS ARRAY_PARTITION variable=in_buffer complete dim=1
+    #pragma 
     for (int w = 0; w < words; w++) {
-        // #pragma HLS PIPELINE II=1
+        #pragma HLS PIPELINE II=1
         bit32_t word = strm_in.read();
-        if (idx < msg_len) in_buffer[idx++] = (char)word(7, 0);
-        if (idx < msg_len) in_buffer[idx++] = (char)word(15, 8);
-        if (idx < msg_len) in_buffer[idx++] = (char)word(23, 16);
-        if (idx < msg_len) in_buffer[idx++] = (char)word(31, 24);
+        if (idx < msg_len){
+            in_buffer[idx++] = (char)word(7, 0);
+            in_buffer[idx++] = (char)word(15, 8);
+            in_buffer[idx++] = (char)word(23, 16);
+            in_buffer[idx++] = (char)word(31, 24);
+        } 
     }
 
     // Print reconstructed message (for debugging)
@@ -46,9 +43,6 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     // }
     // std::cout << std::dec << std::endl; // reset to decimal
 
-    // ------------------------------------------------------
-    // Call Parser 
-    // ------------------------------------------------------
     ParsedMessage parsed = parser(in_buffer);
 
     // ------------------------------------------------------
