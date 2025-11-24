@@ -1,14 +1,12 @@
 #==========================================================================
 # Makefile
 #==========================================================================
-# @brief: A makefile the compiles and synthesizes the bnn program
+# @brief: A makefile the compiles and synthesizes the feed handler program
 #
 # @desc: 1. "make" runs csim by default
-#        2. "make csim" compiles & executes the software implementation
+#        2. "make csim" compiles & executes the market data feed handler
 #        3. "make clean" cleans up the directory
 
-
-# Extract Vivado HLS include path
 XILINX_VIVADO?=/opt/xilinx/Vivado/2019.2
 XIL_HLS=source $(XILINX_VIVADO)/settings64.sh; vivado_hls
 VHLS_INC=$(XILINX_VIVADO)/include
@@ -19,7 +17,7 @@ TCL_SCRIPT=run.tcl
 
 .PHONY: all csim bitstream clean
 
-all: csim
+all: csim orderbook_csim csim_bs
 
 itch: itch_test.cpp itch.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
@@ -55,6 +53,20 @@ xillydemo.bit:
 bitstream: xillydemo.bit
 	@echo "Bitstream saved to $<"
 
+
+# TODO: need to update
+orderbook: hash_tbl.cpp priority_queue.cpp orderbook.cpp orderbook_tb.cpp
+	g++ ${CFLAGS} $^ -o $@ -lrt
+
+result/orderbook_csim.txt: orderbook
+	@echo "Running orderbook sim..."
+	mkdir -p result
+	./$< | tee $@
+
+
+orderbook_csim: result/orderbook_csim.txt
+	@echo "Result reorded to $<"
+
 clean:
-	rm -rf itch bs *.dat *.prj *.log
+	rm -rf itch bs orderbook *.dat *.prj *.log
 	rm -rf zedboard_project* xillydemo.bit
