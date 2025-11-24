@@ -4,31 +4,66 @@
 # @brief: A makefile the compiles and synthesizes the feed handler program
 #
 # @desc: 1. "make" runs csim by default
-#        2. "make csim" compiles & executes the market data feed handler
+#        2. "make csim" compiles & executes the software implementation
 #        3. "make clean" cleans up the directory
 
 XILINX_VIVADO?=/opt/xilinx/Vivado/2019.2
 XIL_HLS=source $(XILINX_VIVADO)/settings64.sh; vivado_hls
 VHLS_INC=$(XILINX_VIVADO)/include
 # Specify compilation flags
-CFLAGS=-g -I${VHLS_INC}
+CFLAGS=-g -I${VHLS_INC} -DHLS_NO_XIL_FPO_LIB -std=c++11 -O3
 
-.PHONY: all orderbook_csim clean
+TCL_SCRIPT=run.tcl
 
-all:
+.PHONY: all csim bitstream clean
 
-# TODO: need to update
-orderbook: hash_tbl.cpp priority_queue.cpp orderbook.cpp orderbook_tb.cpp
+all: csim
+
+itch: itch_test.cpp itch.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
-result/orderbook_csim.txt: orderbook
+result/itch_csim.txt: itch
+	@echo "Running itch sim..."
+	mkdir -p result
+	./$< | tee $@
+
+csim: result/itch_csim.txt
+	@echo "Result recorded to $<"
+
+bs.exe: blackscholes_test.cpp blackscholes.cpp
+	g++ ${CFLAGS} $^ -o $@ -lrt
+
+.PHONY: bs
+bs: bs.exe
+	@echo "Running Black–Scholes sim..."
+	mkdir -p result
+	./bs.exe | tee result/bs_csim.txt
+
+
+csim_bs: result/bs_csim.txt
+	@echo "Result recorded to $<"
+
+ob: orderbook.cpp priority_queue.cpp hash_tbl.cpp orderbook_tb.cpp
+	g++ ${CFLAGS} $^ -o $@ -lrt
+
+result/csim_ob.txt: ob
 	@echo "Running orderbook sim..."
 	mkdir -p result
 	./$< | tee $@
 
+csim_ob: result/csim_ob.txt
+	@echo "Result recorded to $<"
 
-orderbook_csim: result/orderbook_csim.txt
-	@echo "Result reorded to $<"
+xillydemo.bit:
+	@echo "================================================================="
+	@echo "Synthesizing itch and creating bitstream with $(TCL_SCRIPT)..."
+	@echo "================================================================="
+	$(XIL_HLS) -f $(TCL_SCRIPT)
+	source $(XILINX_VIVADO)/settings64.sh; ./run_bitstream.sh
+
+bitstream: xillydemo.bit
+	@echo "Bitstream saved to $<"
 
 clean:
-	rm -rf orderbook *.dat *.prj *.log
+	rm -rf itch bs ob *.dat *.prj *.log
+	rm -rf zedboard_project* xillydemo.bit
