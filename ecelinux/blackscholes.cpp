@@ -24,6 +24,7 @@ T custom_log(const T& x)
   T denominator = 1;
 
   for (int i = 1; i <= logTerms; i++) {
+    #pragma HLS PIPELINE II=1
     result += numerator / denominator;
     numerator *= term_squared;
     denominator += 2;
@@ -40,6 +41,7 @@ T custom_exp(const T& x)
   const int expTerms = 10;
 
   for (int i = 1; i <= expTerms; i++) {
+    #pragma HLS PIPELINE II=1
     term *= x / (T)i;
     result += term;
   }
