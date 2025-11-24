@@ -1,10 +1,10 @@
 #include <iostream>
 
 #include "hash_tbl.hpp"
+#include "itch_common.hpp"
 #include "orderbook.hpp"
 #include "priority_queue.hpp"
 #include "typedefs.h"
-#include "itch_common.hpp"
 
 #define ASSERT true
 
@@ -23,7 +23,7 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
   }
 }
 
-void balance(priority_queue &pq, hash_tbl tbl) {
+void balance(priority_queue &pq, hash_tbl &tbl) {
   while (pq.size > 0) {
     ParsedMessage top_order = pq_top(pq);
     hash_entry *top_entry = hash_tbl_lookup(tbl, top_order.order_id);
@@ -41,7 +41,7 @@ void balance(priority_queue &pq, hash_tbl tbl) {
   }
 }
 
-void remove_shares(priority_queue &pq, hash_tbl tbl, key_type order_id,
+void remove_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id,
                    val_type shares) {
   hash_entry *curr_entry = hash_tbl_lookup(tbl, order_id);
 #if ASSERT
@@ -53,6 +53,15 @@ void remove_shares(priority_queue &pq, hash_tbl tbl, key_type order_id,
     curr_entry->value = 0;
     balance(pq, tbl);
   }
+}
+
+void remove_all_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id) {
+  hash_entry *curr_entry = hash_tbl_lookup(tbl, order_id);
+#if ASSERT
+  assert(curr_entry != nullptr);
+#endif
+  curr_entry->value = 0;
+  balance(pq, tbl);
 }
 
 void orderbook(hls::stream<ParsedMessage> &orders,
@@ -79,15 +88,20 @@ void orderbook(hls::stream<ParsedMessage> &orders,
     break;
 
   case ITCH::OrderExecutedMessageType:
-  case ITCH::OrderExecutedWithPriceMessage:
-  case ITCH::OrderCancelMessage:
+  case ITCH::OrderExecutedWithPriceMessageType:
+  case ITCH::OrderCancelMessageType:
     remove_shares(curr_pq, curr_shares, order.order_id, order.shares);
+    break;
 
   case ITCH::OrderDeleteMessageType:
-    // TODO
+    remove_all_shares(curr_pq, curr_shares, order.order_id);
+    break;
 
   case ITCH::OrderReplaceMessageType:
-    // TODO
+    remove_all_shares(curr_pq, curr_shares, order.order_id);
+    pq_push(curr_pq, order);
+    hash_tbl_put(curr_shares, order.order_id, order.shares);
+    break;
 
   default:
 #if ASSERT
