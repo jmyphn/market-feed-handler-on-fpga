@@ -15,7 +15,7 @@ CFLAGS=-g -I${VHLS_INC}
 
 .PHONY: all orderbook_csim clean
 
-all: orderbook_csim
+all:
 
 # TODO: need to update
 orderbook: hash_tbl.cpp priority_queue.cpp orderbook.cpp orderbook_tb.cpp
