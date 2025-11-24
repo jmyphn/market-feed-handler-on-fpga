@@ -4,8 +4,10 @@
 # @brief: A makefile the compiles and synthesizes the feed handler program
 #
 # @desc: 1. "make" runs csim by default
-#        2. "make csim" compiles & executes the market data feed handler
-#        3. "make clean" cleans up the directory
+#        2. "make itch_csim" compiles & executes the itch parser
+#        3. "make orderbook_csim" compiles & executes the itch parser
+#        4. "make bs_csim" compiles & executes the itch parser
+#        5. "make clean" cleans up the directory
 
 XILINX_VIVADO?=/opt/xilinx/Vivado/2019.2
 XIL_HLS=source $(XILINX_VIVADO)/settings64.sh; vivado_hls
@@ -15,9 +17,9 @@ CFLAGS=-g -I${VHLS_INC} -DHLS_NO_XIL_FPO_LIB -std=c++11 -O3
 
 TCL_SCRIPT=run.tcl
 
-.PHONY: all csim bitstream clean
+.PHONY: all itch_csim bs_csim orderbook_csim bitstream clean
 
-all: csim orderbook_csim csim_bs
+all: itch_csim orderbook_csim bs_csim
 
 itch: itch_test.cpp itch.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
@@ -27,20 +29,29 @@ result/itch_csim.txt: itch
 	mkdir -p result
 	./$< | tee $@
 
-csim: result/itch_csim.txt
+itch_csim: result/itch_csim.txt
 	@echo "Result recorded to $<"
 
-bs.exe: blackscholes_test.cpp blackscholes.cpp
+orderbook: hash_tbl.cpp priority_queue.cpp orderbook.cpp orderbook_tb.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
-.PHONY: bs
-bs: bs.exe
+result/orderbook_csim.txt: orderbook
+	@echo "Running orderbook sim..."
+	mkdir -p result
+	./$< | tee $@
+
+orderbook_csim: result/orderbook_csim.txt
+	@echo "Result recorded to $<"
+	
+bs: blackscholes_test.cpp blackscholes.cpp
+	g++ ${CFLAGS} $^ -o $@ -lrt
+
+result/bs_csim.txt: bs
 	@echo "Running Black–Scholes sim..."
 	mkdir -p result
-	./bs.exe | tee result/bs_csim.txt
+	./$< | tee $@
 
-
-csim_bs: result/bs_csim.txt
+bs_csim: result/bs_csim.txt
 	@echo "Result recorded to $<"
 
 xillydemo.bit:
@@ -52,20 +63,6 @@ xillydemo.bit:
 
 bitstream: xillydemo.bit
 	@echo "Bitstream saved to $<"
-
-
-# TODO: need to update
-orderbook: hash_tbl.cpp priority_queue.cpp orderbook.cpp orderbook_tb.cpp
-	g++ ${CFLAGS} $^ -o $@ -lrt
-
-result/orderbook_csim.txt: orderbook
-	@echo "Running orderbook sim..."
-	mkdir -p result
-	./$< | tee $@
-
-
-orderbook_csim: result/orderbook_csim.txt
-	@echo "Result reorded to $<"
 
 clean:
 	rm -rf itch bs orderbook *.dat *.prj *.log
