@@ -26,8 +26,6 @@ typedef hash_entry hash_tbl[CAPACITY];
  */
 hash_entry *hash_tbl_lookup(hash_entry tbl[CAPACITY], key_type key);
 
-void hash_tbl_remove(hash_tbl tbl, key_type key);
-
 /**
  * Adds a new key, value pair. Assumes key is not in the table.
  */

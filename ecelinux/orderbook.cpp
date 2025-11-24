@@ -10,7 +10,7 @@
 
 /*
  * If pq is at max size, remove an arbitrary element that's not the biggest.
- * Also deletes its corresponding element from the hashtablej
+ * Also deletes its corresponding element from the hashtable
  * POST: pq is not at full capacity
  */
 void keep_slim(priority_queue &pq, hash_tbl tbl) {
@@ -19,10 +19,20 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
     --pq.size;
     std::cerr << "Keeping slim" << std::endl;
     ParsedMessage &order = pq.heap[pq.size];
-    hash_tbl_remove(tbl, order.order_id);
+    hash_entry *entry = hash_tbl_lookup(tbl, order.order_id);
+#if ASSERT
+    assert(entry != nullptr);
+#endif
+    entry->state = TOMBSTONE;
   }
 }
 
+/**
+ * This function removes the head of `pq` if it has 0 shares, as tracked by
+ * `tbl`. It'll keep removing heads until `pq` is empty, or the head has some
+ * shares left. Removing a head will also delete its corresponding entry in
+ * `tbl`.
+ */
 void balance(priority_queue &pq, hash_tbl &tbl) {
   while (pq.size > 0) {
     ParsedMessage top_order = pq_top(pq);
@@ -41,6 +51,10 @@ void balance(priority_queue &pq, hash_tbl &tbl) {
   }
 }
 
+/**
+ * Removes shares from an entry in the orderbook based on `order_id`. Share
+ * count will not drop below 0. Will call `balance` afterwards.
+ */
 void remove_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id,
                    val_type shares) {
   hash_entry *curr_entry = hash_tbl_lookup(tbl, order_id);
@@ -55,6 +69,10 @@ void remove_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id,
   }
 }
 
+/**
+ * Removes all shares from a given order based on `order_id`. Will call
+ * `balance` after.
+ */
 void remove_all_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id) {
   hash_entry *curr_entry = hash_tbl_lookup(tbl, order_id);
 #if ASSERT

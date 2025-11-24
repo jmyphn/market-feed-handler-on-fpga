@@ -9,7 +9,6 @@ ap_uint<16> hash_func(key_type key) {
 }
 
 hash_entry *hash_tbl_lookup(hash_entry tbl[CAPACITY], key_type key) {
-  // TODO
   ap_uint<16> idx = hash_func(key);
   for (int i = 0; i < CAPACITY; i++) {
     // TODO: find better probing pattern
@@ -23,14 +22,6 @@ hash_entry *hash_tbl_lookup(hash_entry tbl[CAPACITY], key_type key) {
   std::cerr << "We are looking for a key that doesn't exist in the table!"
             << std::endl;
   return nullptr;
-}
-
-void hash_tbl_remove(hash_tbl tbl, key_type key) {
-  hash_entry *entry = hash_tbl_lookup(tbl, key);
-#if ASSERT
-  assert(entry != nullptr);
-#endif
-  entry->state = TOMBSTONE;
 }
 
 void hash_tbl_put(hash_tbl tbl, key_type key, val_type val) {
