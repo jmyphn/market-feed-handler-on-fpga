@@ -96,6 +96,14 @@ int main() {
         bool pass = (call_err < EPS && put_err < EPS);
         if (!pass) errors++;
 
+        // ---- PRINT EACH RESULT TO STDOUT ----
+        std::cout << std::fixed << std::setprecision(6);
+        std::cout << "S=" << S
+                  << " | Call_HW=" << call_hw << "  Exp=" << call_exp
+                  << " | Put_HW="  << put_hw  << "  Exp=" << put_exp
+                  << " | Status="  << (pass ? "PASS" : "FAIL")
+                  << "\n";
+
         // Log result
         outfile << "S=" << S
                 << "  HW(Call)=" << call_hw << "  Exp(Call)=" << call_exp
