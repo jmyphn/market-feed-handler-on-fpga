@@ -4,6 +4,7 @@
 #include "orderbook.hpp"
 #include "priority_queue.hpp"
 #include "typedefs.h"
+#include "itch_common.hpp"
 
 #define ASSERT true
 
@@ -71,16 +72,22 @@ void orderbook(hls::stream<ParsedMessage> &orders,
 
   // Process order depending on type
   switch (order.type) {
-  case 'A': // Add Order Message
+  case ITCH::AddOrderMessageType: // Add Order Message
     keep_slim(curr_pq, curr_shares);
     pq_push(curr_pq, order);
     hash_tbl_put(curr_shares, order.order_id, order.shares);
     break;
 
-  case 'E': // Order Executed Message
+  case ITCH::OrderExecutedMessageType:
+  case ITCH::OrderExecutedWithPriceMessage:
+  case ITCH::OrderCancelMessage:
     remove_shares(curr_pq, curr_shares, order.order_id, order.shares);
 
-    // TODO: rest of the cases
+  case ITCH::OrderDeleteMessageType:
+    // TODO
+
+  case ITCH::OrderReplaceMessageType:
+    // TODO
 
   default:
 #if ASSERT
