@@ -4,9 +4,10 @@
 # @brief: A makefile the compiles and synthesizes the feed handler program
 #
 # @desc: 1. "make" runs csim by default
-#        2. "make itch_csim" compiles & executes the itch parser
-#        3. "make orderbook_csim" compiles & executes the itch parser
-#        4. "make bs_csim" compiles & executes the itch parser
+#        2. "make itch_csim" compiles & executes the ITCH parser
+#        3. "make orderbook_csim" compiles & executes the orderbook
+#        4. "make bs_csim" compiles & executes the Black-Scholes algorithm
+#        4. "make hft_csim" compiles & executes the HFT
 #        5. "make clean" cleans up the directory
 
 XILINX_VIVADO?=/opt/xilinx/Vivado/2019.2
@@ -54,9 +55,20 @@ result/bs_csim.txt: bs
 bs_csim: result/bs_csim.txt
 	@echo "Result recorded to $<"
 
+hft: hft_test.cpp hft.cpp hash_tbl.cpp priority_queue.cpp
+	g++ ${CFLAGS} $^ -o $@ -lrt
+
+result/hft_csim.txt: hft
+	@echo "Running hft sim..."
+	mkdir -p result
+	./$< | tee $@
+
+hft_csim: result/hft_csim.txt
+	@echo "Result recorded to $<"
+
 xillydemo.bit:
 	@echo "================================================================="
-	@echo "Synthesizing itch and creating bitstream with $(TCL_SCRIPT)..."
+	@echo "Synthesizing HFT and creating bitstream with $(TCL_SCRIPT)..."
 	@echo "================================================================="
 	$(XIL_HLS) -f $(TCL_SCRIPT)
 	source $(XILINX_VIVADO)/settings64.sh; ./run_bitstream.sh
@@ -65,5 +77,5 @@ bitstream: xillydemo.bit
 	@echo "Bitstream saved to $<"
 
 clean:
-	rm -rf itch bs orderbook *.dat *.prj *.log
+	rm -rf itch bs orderbook hft *.dat *.prj *.log
 	rm -rf zedboard_project* xillydemo.bit

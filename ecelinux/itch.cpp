@@ -26,22 +26,26 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
         #pragma HLS PIPELINE II=1
         bit32_t word = strm_in.read();
         if (idx < msg_len){
-            in_buffer[idx++] = (char)word(7, 0);
-            in_buffer[idx++] = (char)word(15, 8);
-            in_buffer[idx++] = (char)word(23, 16);
-            in_buffer[idx++] = (char)word(31, 24);
+            // in_buffer[idx++] = (char)word(7, 0);
+            // in_buffer[idx++] = (char)word(15, 8);
+            // in_buffer[idx++] = (char)word(23, 16);
+            // in_buffer[idx++] = (char)word(31, 24);
+            in_buffer[idx++] = (char)word(31,24);
+            in_buffer[idx++] = (char)word(23,16);
+            in_buffer[idx++] = (char)word(15,8);
+            in_buffer[idx++] = (char)word(7,0);
         } 
     }
 
     // Print reconstructed message (for debugging)
-    // std::cout << "DUT's reconstructed msg:      ";
-    // for (int i = 0; i < msg_len; i++) {
-    //     // Cast to unsigned int to print the byte as a number
-    //     std::cout << std::hex << std::setw(2) << std::setfill('0') 
-    //             << static_cast<unsigned int>(static_cast<unsigned char>(in_buffer[i])) 
-    //             << " ";
-    // }
-    // std::cout << std::dec << std::endl; // reset to decimal
+    std::cout << "DUT's reconstructed msg:      ";
+    for (int i = 0; i < msg_len; i++) {
+        // Cast to unsigned int to print the byte as a number
+        std::cout << std::hex << std::setw(2) << std::setfill('0') 
+                << static_cast<unsigned int>(static_cast<unsigned char>(in_buffer[i])) 
+                << " ";
+    }
+    std::cout << std::dec << std::endl; // reset to decimal
 
     ParsedMessage parsed = parser(in_buffer);
 
@@ -51,12 +55,11 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     bit32_t w0 = 0;
     w0(7,0)   = parsed.type;
     w0(15,8)  = parsed.side;
-    w0 = parsed.order_id;
     strm_out.write(w0);
-    strm_out.write((bit32_t)parsed.order_id.range(31,0));
     strm_out.write((bit32_t)parsed.order_id.range(63,32));
-    strm_out.write((bit32_t)parsed.new_order_id.range(31,0));
+    strm_out.write((bit32_t)parsed.order_id.range(31,0));
     strm_out.write((bit32_t)parsed.new_order_id.range(63,32));
+    strm_out.write((bit32_t)parsed.new_order_id.range(31,0));
     strm_out.write((bit32_t)parsed.shares);
     strm_out.write((bit32_t)parsed.price);
 }
@@ -84,37 +87,44 @@ ParsedMessage parser(char* buffer) {
     switch (msgType) {
         case ITCH::AddOrderMessageType: {
             const ITCH::AddOrderMessage* m = (const ITCH::AddOrderMessage*)buffer;
+            std::cout << "m: " << std::hex << *m << "\n";
             output.order_id = m->orderReferenceNumber;
             output.side     = m->buySellIndicator;
+            std::cout << "side: " << std::hex << output.side << "\n";
             output.shares   = m->shares;
             output.price    = m->price;
             break;
         }
         case ITCH::OrderExecutedMessageType: {
             const ITCH::OrderExecutedMessage* m = (const ITCH::OrderExecutedMessage*)buffer;
+            std::cout << "m: " << std::hex << *m << "\n";
             output.order_id = m->orderReferenceNumber;
             output.shares   = m->executedShares;
             break;
         }
         case ITCH::OrderExecutedWithPriceMessageType: {
             const ITCH::OrderExecutedWithPriceMessage* m = (const ITCH::OrderExecutedWithPriceMessage*)buffer;
+            std::cout << "m: " << std::hex << *m << "\n";
             output.order_id = m->orderReferenceNumber;
             output.shares   = m->executedShares;
             break;
         }
         case ITCH::OrderCancelMessageType: {
             const ITCH::OrderCancelMessage* m = (const ITCH::OrderCancelMessage*)buffer;
+            std::cout << "m: " << std::hex << *m << "\n";
             output.order_id = m->orderReferenceNumber;
             output.shares = m->cancelledShares;
             break;
         }
         case ITCH::OrderDeleteMessageType: {
             const ITCH::OrderDeleteMessage* m = (const ITCH::OrderDeleteMessage*)buffer;
+            std::cout << "m: " << std::hex << *m << "\n";
             output.order_id = m->orderReferenceNumber;
             break;
         }
         case ITCH::OrderReplaceMessageType: {
             const ITCH::OrderReplaceMessage* m = (const ITCH::OrderReplaceMessage*)buffer;
+            std::cout << "m: " << std::hex << *m << "\n";
             output.order_id     = m->originalOrderReferenceNumber;
             output.new_order_id = m->newOrderReferenceNumber;
             output.shares       = m->shares;
