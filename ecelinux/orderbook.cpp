@@ -7,6 +7,9 @@
 #include "typedefs.h"
 
 #define ASSERT true
+#if ASSERT
+#include <cassert>
+#endif
 
 /*
  * If pq is at max size, remove an arbitrary element that's not the biggest.
@@ -17,15 +20,15 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
 #pragma hls inline
   if (pq.size == CAPACITY) {
     --pq.size;
-    // std::cerr << "Keeping slim" << std::endl;
+    std::cerr << "Keeping slim" << std::endl;
     ParsedMessage &order = pq.heap[pq.size];
-    hash_entry *entry = hash_tbl_lookup(tbl, order.order_id);
+    int idx = hash_tbl_lookup(tbl, order.order_id);
 #if ASSERT
-    assert(entry != nullptr);
+    assert(idx != -1);
 #endif
-    // std::cerr << "Removing " << entry->key << std::endl;
-    entry->value = 0;
-    entry->state = TOMBSTONE;
+    hash_entry &entry = tbl[idx];
+    entry.value = 0;
+    entry.state = TOMBSTONE;
   }
 }
 
@@ -35,20 +38,20 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
  * shares left. Removing a head will also delete its corresponding entry in
  * `tbl`.
  */
-void balance(priority_queue &pq, hash_tbl &tbl) {
+void balance(priority_queue &pq, hash_tbl tbl) {
   while (pq.size > 0) {
     ParsedMessage top_order = pq_top(pq);
-    hash_entry *top_entry = hash_tbl_lookup(tbl, top_order.order_id);
+    int idx = hash_tbl_lookup(tbl, top_order.order_id);
 #if ASSERT
-    assert(top_entry != nullptr);
+    assert(idx != -1);
 #endif
-    if (top_entry->value > 0) {
+    hash_entry &top_entry = tbl[idx];
+    if (top_entry.value > 0) {
       break;
     } else {
       // remove from hash table
-      // std::cerr << "Removing " << top_entry->key << std::endl;
-      top_entry->value = 0;
-      top_entry->state = TOMBSTONE;
+      top_entry.value = 0;
+      top_entry.state = TOMBSTONE;
       pq_pop(pq);
     }
   }
@@ -58,14 +61,14 @@ void balance(priority_queue &pq, hash_tbl &tbl) {
  * Removes shares from an entry in the orderbook based on `order_id`. Share
  * count will not drop below 0.
  */
-void remove_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id,
-                   val_type shares) {
-  hash_entry *curr_entry = hash_tbl_lookup(tbl, order_id);
-  if (curr_entry != nullptr) {
-    if (curr_entry->value > shares) {
-      curr_entry->value -= shares;
+void remove_shares(hash_tbl tbl, key_type order_id, val_type &shares) {
+  int idx = hash_tbl_lookup(tbl, order_id);
+  if (idx != -1) {
+    hash_entry &curr_entry = tbl[idx];
+    if (curr_entry.value > shares) {
+      curr_entry.value -= shares;
     } else {
-      curr_entry->value = 0;
+      curr_entry.value = 0;
     }
   }
 }
@@ -73,10 +76,11 @@ void remove_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id,
 /**
  * Removes all shares from a given order based on `order_id`.
  */
-void remove_all_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id) {
-  hash_entry *curr_entry = hash_tbl_lookup(tbl, order_id);
-  if (curr_entry != nullptr) {
-    curr_entry->value = 0;
+void remove_all_shares(hash_tbl tbl, key_type order_id) {
+  int idx = hash_tbl_lookup(tbl, order_id);
+  if (idx != -1) {
+    hash_entry &curr_entry = tbl[idx];
+    curr_entry.value = 0;
   }
 }
 
@@ -91,36 +95,45 @@ void orderbook(hls::stream<ParsedMessage> &orders,
   // #endif
 
   ParsedMessage order = orders.read();
-  priority_queue &curr_pq = (order.side == 'b') ? bid_pq : ask_pq;
 
   // Process order depending on type
   switch (order.type) {
   case ITCH::AddOrderMessageType: // Add Order Message
-    keep_slim(curr_pq, shares_per_order);
-    pq_push(curr_pq, order);
+    if (order.side == 'b') {
+      keep_slim(bid_pq, shares_per_order);
+      pq_push(bid_pq, order);
+    } else {
+      keep_slim(ask_pq, shares_per_order);
+      pq_push(ask_pq, order);
+    }
     hash_tbl_put(shares_per_order, order.order_id, order.shares);
     break;
 
   case ITCH::OrderExecutedMessageType:
   case ITCH::OrderExecutedWithPriceMessageType:
   case ITCH::OrderCancelMessageType:
-    remove_shares(curr_pq, shares_per_order, order.order_id, order.shares);
+    remove_shares(shares_per_order, order.order_id, order.shares);
     balance(bid_pq, shares_per_order);
     balance(ask_pq, shares_per_order);
     break;
 
   case ITCH::OrderDeleteMessageType:
-    remove_all_shares(curr_pq, shares_per_order, order.order_id);
+    remove_all_shares(shares_per_order, order.order_id);
     balance(bid_pq, shares_per_order);
     balance(ask_pq, shares_per_order);
     break;
 
   case ITCH::OrderReplaceMessageType:
-    remove_all_shares(curr_pq, shares_per_order, order.order_id);
+    remove_all_shares(shares_per_order, order.order_id);
     balance(bid_pq, shares_per_order);
     balance(ask_pq, shares_per_order);
-    keep_slim(curr_pq, shares_per_order);
-    pq_push(curr_pq, order);
+    if (order.side == 'b') {
+      keep_slim(bid_pq, shares_per_order);
+      pq_push(bid_pq, order);
+    } else {
+      keep_slim(ask_pq, shares_per_order);
+      pq_push(ask_pq, order);
+    }
     hash_tbl_put(shares_per_order, order.order_id, order.shares);
     break;
 
@@ -128,8 +141,8 @@ void orderbook(hls::stream<ParsedMessage> &orders,
     // #if ASSERT
     //   // message type is probably not implemented
     //   assert(false);
-    // #endif
     break;
+    // #endif
   }
 
   // Output a spot price
@@ -141,11 +154,5 @@ void orderbook(hls::stream<ParsedMessage> &orders,
   else if (ask_pq.size == 0)
     spot_price = pq_top(bid_pq).price;
   else
-    spot_price = (pq_top(ask_pq).price + pq_top(bid_pq).price) << 1;
-
-  // std::cerr << "Top bid order_id is " << pq_top(ask_pq).order_id <<
-  // std::endl;
-
-  spot_prices.write(spot_price);
-  std::cerr << "Order outputting spot_price of " << spot_price << std::endl;
+    spot_prices.write((pq_top(ask_pq).price + pq_top(bid_pq).price) << 1);
 }

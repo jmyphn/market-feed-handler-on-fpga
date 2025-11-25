@@ -1,5 +1,6 @@
 #include "priority_queue.hpp"
 #include "typedefs.h"
+#include <utility>
 
 #if ASSERT
 #include <cassert>
