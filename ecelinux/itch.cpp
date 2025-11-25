@@ -104,7 +104,7 @@ ParsedMessage parser(char* buffer) {
     case ITCH::OrderExecutedWithPriceMessageType: {
         out.order_id = read_u64_be(buffer + 11);
         out.shares   = read_u32_be(buffer + 19);
-        out.price    = read_u32_be(buffer + 32);
+        // out.price    = read_u32_be(buffer + 32);
         break;
     }
 

@@ -49,6 +49,8 @@ int main() {
 
         std::unordered_map<ITCH::MessageType_t, uint64_t> counts;
         uint64_t total = 0;
+        bool pass = 0;
+        int errors = 0;
 
         const char* msg = nullptr;
         while ((msg = reader.nextMessage())) {
@@ -61,65 +63,50 @@ int main() {
 
             // Expected fields
             bit32_t type = payload[0];
+            bit32_t side = 0;
             bit32_t order_id_hi = (payload[11] << 24) | (payload[12] << 16) |
                                 (payload[13] << 8)  | payload[14];
-
             bit32_t order_id_lo = (payload[15] << 24) | (payload[16] << 16) |
                                 (payload[17] << 8)  | payload[18];
+            bit32_t new_order_hi = 0;
+            bit32_t new_order_lo = 0;
+            bit32_t shares = 0;
+            bit32_t price = 0;
 
-            if ((char)type == 'A') {
-                bit32_t side = payload[19];
-                bit32_t shares = (payload[20] << 24) | (payload[21] << 16) | (payload[22] << 8)  | payload[23];
-                bit32_t price = (payload[32] << 24) | (payload[33] << 16) | (payload[34] << 8)  | payload[35];
+            switch ((char)type) {
+            case 'A': {
+                side = payload[19];
+                shares = (payload[20] << 24) | (payload[21] << 16) | (payload[22] << 8)  | payload[23];
+                price = (payload[32] << 24) | (payload[33] << 16) | (payload[34] << 8)  | payload[35];
+                break;
+            }
+            case 'E': 
+            case 'C': 
+            case 'X': {
+                shares = (payload[19] << 24) | (payload[20] << 16) | (payload[21] << 8)  | payload[22];
+                break;
+            }
+            case 'U': {
+                new_order_hi = (payload[19] << 24) | (payload[20] << 16) |
+                                    (payload[21] << 8)  | payload[22];
+                new_order_lo = (payload[23] << 24) | (payload[24] << 16) |
+                                    (payload[25] << 8)  | payload[26];
+                shares = (payload[27] << 24) | (payload[28] << 16) | (payload[29] << 8)  | payload[30];
+                price = (payload[31] << 24) | (payload[32] << 16) | (payload[33] << 8)  | payload[34];
+                break;
+            }
+            default: 
+                break;
             }
 
-            // side;
-            // new_order_id;
-            // shares;
-            // price;
-
-
-            std::cout << "Type: " << std::hex << type << ", ";
-            std::cout << "Order ID High: " << std::hex << order_id_hi << ", ";
-            std::cout << "Order ID Low: " << std::hex << order_id_lo << ", ";
-
-            if (msg_len == 36) { // sanity check for AddOrder message size
-
-                char messageType = payload[0];
-
-                // Big-endian reconstruction
-                uint64_t orderRef = ((uint64_t)payload[11] << 56) |
-                                    ((uint64_t)payload[12] << 48) |
-                                    ((uint64_t)payload[13] << 40) |
-                                    ((uint64_t)payload[14] << 32) |
-                                    ((uint64_t)payload[15] << 24) |
-                                    ((uint64_t)payload[16] << 16) |
-                                    ((uint64_t)payload[17] << 8)  |
-                                    ((uint64_t)payload[18]);              // 8 bytes
-                char side = payload[19];                                        // 1 byte
-                uint32_t shares = (payload[20] << 24) | (payload[21] << 16) |
-                                (payload[22] << 8)  | payload[23];           // 4 bytes
-                uint32_t price = (payload[32] << 24) | (payload[33] << 16) |
-                                (payload[34] << 8)  | payload[35];           // 4 bytes
-
-                // Print all fields in a single line
-                std::cout << std::hex << std::setfill('0')
-                        << "Type: " << std::setw(2) << (unsigned int)messageType << " "
-                        << "OrderRef: " << std::setw(16) << orderRef << " "
-                        << "Side: " << side << " "
-                        << "Shares: " << std::setw(8) << shares << " "
-                        << "Price: " << std::setw(8) << price
-                        << std::dec << std::endl; // reset to decimal
-            }
-
-            // Print message details (for debugging)
-            std::cout << "Type: " << t << ", Length: " << msg_len << ", Payload: ";
-            for (int i = 0; i < msg_len; i++) {
-                std::cout << std::hex << std::setw(2) << std::setfill('0')
-                        << static_cast<unsigned int>(static_cast<unsigned char>(payload[i]))
-                        << " ";
-            }
-            std::cout << std::dec << std::endl; // reset back to decimal
+            // // Print message details (for debugging)
+            // std::cout << "Type: " << t << ", Length: " << msg_len << ", Payload: ";
+            // for (int i = 0; i < msg_len; i++) {
+            //     std::cout << std::hex << std::setw(2) << std::setfill('0')
+            //             << static_cast<unsigned int>(static_cast<unsigned char>(payload[i]))
+            //             << " ";
+            // }
+            // std::cout << std::dec << std::endl; // reset back to decimal
 
             bit32_t hdr = 0; hdr(15, 0) = msg_len;
             in_stream.write(hdr);
@@ -136,20 +123,39 @@ int main() {
             itch_dut(in_stream, out_stream);
 
             // Read all 7 words to drain the stream
-            std::cout << "--> ";
+            std::cout << "Type " << t << " | ";
             for (int i = 0; i < 7; i++) {
                 bit32_t out_word = out_stream.read();
+                switch (i) {
+                    case 0: pass = (type == out_word(7,0) && side == out_word(15,8)); break;
+                    case 1: pass = (order_id_hi == out_word); break; 
+                    case 2: pass = (order_id_lo == out_word); break; 
+                    case 3: pass = (new_order_hi == out_word); break; 
+                    case 4: pass = (new_order_lo == out_word); break; 
+                    case 5: pass = (shares == out_word);break; 
+                    case 6: pass = (price == out_word);break; 
+                }
+                if (!pass) errors++;
                 std::cout << std::hex << std::setw(8) << std::setfill('0')
                         << static_cast<unsigned int>(out_word) << " ";
             }
-            std::cout << std::dec << "\n\n"; // reset back to decimal
+            std::cout << "| Status=" << (pass ? "PASS" : "FAIL");
+            std::cout << std::dec << "\n"; // reset back to decimal
         }
 
         // Summary only
-        std::cout << "Parsed file: " << INPUT_ITCH_FILE << "\n";
-        std::cout << "Total messages: " << total << "\n";
+    std::cout << "\n";
+    std::cout << "============================================\n";
+    std::cout << " Parser FPGA Testbench Summary\n";
+    std::cout << "============================================\n";
+        std::cout << "Parsed file:      " << INPUT_ITCH_FILE << "\n";
+        std::cout << "Total messages:   " << total << "\n";
         std::cout << "Total bytes read: " << reader.getTotalBytesRead() << "\n\n";
         for (auto &kv : counts) std::cout << type_name(kv.first) << ": " << kv.second << "\n";
+        std::cout << "\nError rate:       " 
+              << std::setprecision(4)
+              << (100.0 * errors / total) << "%\n";
+    std::cout << "============================================\n";
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
