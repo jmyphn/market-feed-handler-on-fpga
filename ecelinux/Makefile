@@ -52,7 +52,7 @@ result/bs_csim.txt: bs
 bs_csim: result/bs_csim.txt
 	@echo "Result recorded to $<"
 
-hft: hft_test.cpp itch.cpp orderbook.cpp priority_queue.cpp hash_tbl.cpp blackscholes.cpp
+hft: hft_test.cpp hft.cpp itch.cpp orderbook.cpp priority_queue.cpp hash_tbl.cpp blackscholes.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
 result/hft_csim.txt: hft
