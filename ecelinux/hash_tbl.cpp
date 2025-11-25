@@ -13,14 +13,11 @@ hash_entry *hash_tbl_lookup(hash_tbl tbl, key_type key) {
   for (int i = 0; i < CAPACITY; i++) {
     // TODO: find better probing pattern
     if (tbl[idx].state == VALID && tbl[idx].key == key) {
-      std::cerr << "Returning idx " << idx << std::endl;
       return &tbl[idx];
     } else if (tbl[idx].state == EMPTY)
       break;
     idx = (idx + 1) % CAPACITY;
   }
-  std::cerr << "We are looking for a key that doesn't exist in the table!"
-            << std::endl;
   return nullptr;
 }
 
@@ -29,7 +26,6 @@ void hash_tbl_put(hash_tbl tbl, key_type key, val_type val) {
   for (int i = 0; i < CAPACITY; i++) {
     // bit-arithmetic to check if its TOMBSTONE or EMPTY
     if (~(tbl[key].state & 0)) {
-      std::cerr << "Putting to idx " << idx << std::endl;
       tbl[idx].key = key;
       tbl[idx].value = val;
       tbl[idx].state = VALID;
