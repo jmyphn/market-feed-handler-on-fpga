@@ -12,14 +12,6 @@ typedef bool bit;
 // orderbook capacity
 #define CAPACITY 4  // TODO: make bigger later, like 4096
 
-struct ParsedMessage {
-    ap_uint<8>  type;
-    ap_uint<8>  side;
-    ap_uint<64> order_id;
-    ap_uint<64> new_order_id;
-    ap_uint<32> shares;
-    ap_uint<32> price;
-};
 typedef ap_int<8> bit8_t;
 typedef ap_int<16> bit16_t;
 typedef ap_uint<2> bit2_t;
