@@ -39,6 +39,7 @@ void hft(
         bit32_t w6 = itch_parsed.read();
 
         p.type = (ap_uint<8>)w0(7,0);
+        std::cout << "Type " << (char)p.type << " | ";
         p.side = (ap_uint<8>)w0(15,8);
         p.order_id     = ((ap_uint<64>)((uint32_t)w1), (uint32_t)w2);
         p.new_order_id = ((ap_uint<64>)((uint32_t)w3), (uint32_t)w4);

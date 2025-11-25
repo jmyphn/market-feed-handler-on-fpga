@@ -14,7 +14,7 @@ void hft(
     hls::stream<bit32_t> &put_out
 );
 
-static const char* INPUT_ITCH_FILE = "./data/itch_test_in";
+static const char* INPUT_ITCH_FILE = "./data/filtered_data_500";
 
 static inline bit32_t pack_header(uint16_t len) {
     bit32_t x = 0;
