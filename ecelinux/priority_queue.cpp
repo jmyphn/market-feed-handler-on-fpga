@@ -66,9 +66,6 @@ void pq_push(priority_queue &pq, ParsedMessage &order) {
       break;
   }
   pq.size++;
-  std::cerr << "pq now has size " << pq.size << std::endl;
-  std::cerr << "pq top element has order_id " << pq.heap[0].order_id
-            << std::endl;
 }
 
 void pq_pop(priority_queue &pq) {
@@ -83,7 +80,6 @@ void pq_pop(priority_queue &pq) {
     int l = 2 * curr + 1;
     int r = 2 * curr + 2;
     int best = curr;
-    std::cerr << "curr: " << curr << ", l: " << l << ", r: " << r << std::endl;
     if (l < pq.size && cmp(pq.heap[l], pq.heap[best]))
       best = l;
     if (r < pq.size && cmp(pq.heap[r], pq.heap[best]))
@@ -95,8 +91,5 @@ void pq_pop(priority_queue &pq) {
     std::swap(pq.heap[curr], pq.heap[best]);
     curr = best;
   }
-  std::cerr << "pq now has size " << pq.size << std::endl;
-  std::cerr << "pq top element has order_id " << pq.heap[0].order_id
-            << std::endl;
   ;
 }
