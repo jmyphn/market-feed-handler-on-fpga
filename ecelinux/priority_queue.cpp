@@ -61,12 +61,14 @@ void pq_push(priority_queue &pq, ParsedMessage &order) {
   for (int i = insert_level; i > 0; --i) {
     int parent = parent_idx(pq.size);
     if (cmp(order, pq.heap[parent])) {
-      std::cerr << "SWAPPING\n";
       std::swap(pq.heap[pq.size], pq.heap[parent]);
     } else
       break;
   }
   pq.size++;
+  std::cerr << "pq now has size " << pq.size << std::endl;
+  std::cerr << "pq top element has order_id " << pq.heap[0].order_id
+            << std::endl;
 }
 
 void pq_pop(priority_queue &pq) {
@@ -80,18 +82,21 @@ void pq_pop(priority_queue &pq) {
   while (curr < pq.size) {
     int l = 2 * curr + 1;
     int r = 2 * curr + 2;
-    if (cmp(pq.heap[l], pq.heap[r])) {
-      if (cmp(pq.heap[l], pq.heap[curr])) {
-        std::swap(pq.heap[l], pq.heap[curr]);
-        curr = l;
-      } else
-        break;
-    } else {
-      if (cmp(pq.heap[r], pq.heap[curr])) {
-        std::swap(pq.heap[r], pq.heap[curr]);
-        curr = r;
-      } else
-        break;
-    }
+    int best = curr;
+    std::cerr << "curr: " << curr << ", l: " << l << ", r: " << r << std::endl;
+    if (l < pq.size && cmp(pq.heap[l], pq.heap[best]))
+      best = l;
+    if (r < pq.size && cmp(pq.heap[r], pq.heap[best]))
+      best = r;
+
+    if (best == curr)
+      break;
+
+    std::swap(pq.heap[curr], pq.heap[best]);
+    curr = best;
   }
+  std::cerr << "pq now has size " << pq.size << std::endl;
+  std::cerr << "pq top element has order_id " << pq.heap[0].order_id
+            << std::endl;
+  ;
 }

@@ -4,19 +4,19 @@
 
 ap_uint<16> hash_func(key_type key) {
   // NOTE: ripped this hash function from GPT, there might be a better constant
-  const ap_uint<32> A = 40503u;    // good odd 16-bit constant
-  return ((uint32_t)key * A) >> 4; // keep top 12 bits → 0..4095
+  const ap_uint<32> A = 40503u;          // good odd 16-bit constant
+  return ((uint32_t)key * A) % CAPACITY; // keep top 12 bits → 0..4095
 }
 
-hash_entry *hash_tbl_lookup(hash_entry tbl[CAPACITY], key_type key) {
+hash_entry *hash_tbl_lookup(hash_tbl tbl, key_type key) {
   ap_uint<16> idx = hash_func(key);
   for (int i = 0; i < CAPACITY; i++) {
     // TODO: find better probing pattern
-    if (!tbl[idx].state == VALID) {
-      continue;
-    }
-    if (tbl[idx].key == key)
+    if (tbl[idx].state == VALID && tbl[idx].key == key) {
+      std::cerr << "Returning idx " << idx << std::endl;
       return &tbl[idx];
+    } else if (tbl[idx].state == EMPTY)
+      break;
     idx = (idx + 1) % CAPACITY;
   }
   std::cerr << "We are looking for a key that doesn't exist in the table!"
@@ -27,10 +27,12 @@ hash_entry *hash_tbl_lookup(hash_entry tbl[CAPACITY], key_type key) {
 void hash_tbl_put(hash_tbl tbl, key_type key, val_type val) {
   ap_uint<16> idx = hash_func(key);
   for (int i = 0; i < CAPACITY; i++) {
-    if (~(tbl[key].state &
-          0)) { // bit-arithmetic to check if its TOMBSTONE or EMPTY
-      tbl[key].value = val;
-      tbl[key].value = VALID;
+    // bit-arithmetic to check if its TOMBSTONE or EMPTY
+    if (~(tbl[key].state & 0)) {
+      std::cerr << "Putting to idx " << idx << std::endl;
+      tbl[idx].key = key;
+      tbl[idx].value = val;
+      tbl[idx].state = VALID;
       return;
     }
     idx = (idx + 1) % CAPACITY; // TODO: better probing here too

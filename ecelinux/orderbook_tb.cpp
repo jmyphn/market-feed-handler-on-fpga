@@ -1,24 +1,29 @@
 /**
  * Orderbook testing.
  *
- * TODO: need to test hash table functionality
+ * Testbench assumes every input as a corresponding output.
+ *
+ * Write tests by adding values to test_inputs and expected.
  */
+#include "itch_common.hpp"
 #include "orderbook.hpp"
 #include "typedefs.h"
 #include <iostream>
+
+#define X 0 // for marking placeholders
 
 using namespace std;
 
 int main() {
   cout << "Starting tests" << endl;
-  // TODO
 
   // Inputs
   hls::stream<ParsedMessage> test_stream;
   ParsedMessage test_inputs[] = {
-      ParsedMessage{'A', 'b', 0, 0, 1, 10}, ParsedMessage{'A', 'b', 0, 0, 2, 9},
-      ParsedMessage{'A', 'b', 0, 0, 3, 11},
-      // TODO: changed to AddOrderMessageType instead of 'A' for clarity
+      ParsedMessage{ITCH::AddOrderMessageType, 'b', 0, X, 1, 10},
+      ParsedMessage{ITCH::AddOrderMessageType, 'b', 1, X, 2, 9},
+      ParsedMessage{ITCH::AddOrderMessageType, 'b', 2, X, 3, 11},
+      ParsedMessage{ITCH::OrderDeleteMessageType, 'b', 2, X, X, X},
   };
   for (int i = 0; i < sizeof(test_inputs) / sizeof(ParsedMessage); ++i) {
     test_stream.write(test_inputs[i]);
@@ -26,11 +31,14 @@ int main() {
 
   // Outputs
   hls::stream<bit32_t> spot_price_stream;
-  bit32_t expected[] = {10, 10, 11};
+  bit32_t expected[] = {10, 10, 11, 10};
 
+  // Simulate the tests
   while (!test_stream.empty()) {
     orderbook(test_stream, spot_price_stream);
   }
+
+  // Check test outputs
   bool good = true;
   int expected_size = sizeof(expected) / sizeof(bit32_t);
   int i = 0;

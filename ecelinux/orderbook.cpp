@@ -23,6 +23,7 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
 #if ASSERT
     assert(entry != nullptr);
 #endif
+    entry->value = 0;
     entry->state = TOMBSTONE;
   }
 }
@@ -34,16 +35,18 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
  * `tbl`.
  */
 void balance(priority_queue &pq, hash_tbl &tbl) {
+  std::cerr << "Initiate balancing" << std::endl;
   while (pq.size > 0) {
     ParsedMessage top_order = pq_top(pq);
     hash_entry *top_entry = hash_tbl_lookup(tbl, top_order.order_id);
 #if ASSERT
     assert(top_entry != nullptr);
 #endif
-    if (top_entry->value >= 0) {
+    if (top_entry->value > 0) {
       break;
     } else {
       // remove from hash table
+      std::cerr << "Removing order " << top_entry->key << std::endl;
       top_entry->value = 0;
       top_entry->state = TOMBSTONE;
       pq_pop(pq);
