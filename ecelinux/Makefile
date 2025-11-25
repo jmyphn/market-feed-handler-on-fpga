@@ -25,7 +25,7 @@ itch: itch_test.cpp itch.cpp
 result/itch_csim.txt: itch
 	@echo "Running itch sim..."
 	mkdir -p result
-	./$< | tee $@
+	./$< | tee -a $@
 
 itch_csim: result/itch_csim.txt
 	@echo "Result recorded to $<"

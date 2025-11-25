@@ -14,7 +14,7 @@ void hft(
     hls::stream<bit32_t> &put_out
 );
 
-static const char* INPUT_ITCH_FILE = "./data/filtered_data_500";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_10_per_type";
 
 static inline bit32_t pack_header(uint16_t len) {
     bit32_t x = 0;
@@ -31,7 +31,10 @@ int main() {
         hls::stream<bit32_t> put_out;
 
         const char* msg = nullptr;
+        uint64_t total = 0;
+
         while ((msg = reader.nextMessage())) {
+            total++;
 
             uint16_t net_len = *(uint16_t*)msg;
             uint16_t len = be16toh(net_len);
@@ -59,9 +62,19 @@ int main() {
                 P.u = (uint32_t)put_out.read();
 
                 std::cout << std::fixed << std::setprecision(6)
-                          << "Call=" << C.f << "  Put=" << P.f << "\n";
+                          << "Call=" << std::setw(9) << C.f 
+                          << "  Put=" << std::setw(9) << P.f << "\n";
             }
         }
+
+        // Summary only
+        std::cout << "\n";
+        std::cout << "============================================\n";
+        std::cout << " Interconnect FPGA Testbench Summary\n";
+        std::cout << "============================================\n";
+        std::cout << "Parsed file                 : " << INPUT_ITCH_FILE << "\n";
+        std::cout << "Total messages              : " << total << "\n";
+        std::cout << "============================================\n";
 
     } catch (std::exception &e) {
         std::cerr << "ERROR: " << e.what() << "\n";

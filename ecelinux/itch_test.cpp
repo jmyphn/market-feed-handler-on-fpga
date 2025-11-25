@@ -6,10 +6,11 @@
 #include <ap_int.h>
 #include <cstdint>
 #include <iostream>
+#include <fstream>
 #include <unordered_map>
 #include <endian.h>
 
-static const char* INPUT_ITCH_FILE = "./data/itch_test_in";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_10_per_type";
 
 static const char* type_name(ITCH::MessageType_t t) {
     switch (t) {
@@ -43,6 +44,7 @@ static const char* type_name(ITCH::MessageType_t t) {
 int main() {
     try {
         ITCH::Reader reader(INPUT_ITCH_FILE, 16384);
+        std::ofstream outfile("result/itch_csim.txt");
 
         hls::stream<bit32_t> in_stream;
         hls::stream<bit32_t> out_stream;
@@ -123,7 +125,7 @@ int main() {
             itch_dut(in_stream, out_stream);
 
             // Read all 7 words to drain the stream
-            std::cout << "Type " << t << " | ";
+            outfile << "Type " << t << " | ";
             for (int i = 0; i < 7; i++) {
                 bit32_t out_word = out_stream.read();
                 switch (i) {
@@ -132,19 +134,14 @@ int main() {
                     case 2: pass = (order_id_lo == out_word); break; 
                     case 3: pass = (new_order_hi == out_word); break; 
                     case 4: pass = (new_order_lo == out_word); break; 
-                    case 5: pass = (shares == out_word);break; 
-                    case 6: {
-                        pass = (price == out_word);
-                        // std::cout << "| Spot Price=" << std::fixed << std::setprecision(4) << out_word;
-                        break; 
-                    }
+                    case 5: pass = (shares == out_word); break; 
+                    case 6: pass = (price == out_word); break; 
                 }
                 if (!pass) errors++;
-                std::cout << std::hex << std::setw(8) << std::setfill('0')
+                outfile << std::hex << std::setw(8) << std::setfill('0')
                         << static_cast<unsigned int>(out_word) << " ";
             }
-            std::cout << "| Status=" << (pass ? "PASS" : "FAIL");
-            std::cout << std::dec << "\n"; // reset back to decimal
+            outfile << "| Status=" << (pass ? "PASS" : "FAIL") << "\n";
         }
 
         // Summary only
@@ -152,14 +149,22 @@ int main() {
     std::cout << "============================================\n";
     std::cout << " Parser FPGA Testbench Summary\n";
     std::cout << "============================================\n";
-        std::cout << "Parsed file:      " << INPUT_ITCH_FILE << "\n";
-        std::cout << "Total messages:   " << total << "\n";
-        std::cout << "Total bytes read: " << reader.getTotalBytesRead() << "\n\n";
-        for (auto &kv : counts) std::cout << type_name(kv.first) << ": " << kv.second << "\n";
-        std::cout << "\nError rate:       " 
-              << std::setprecision(4)
-              << (100.0 * errors / total) << "%\n";
+    std::cout << "Parsed file                 : " << INPUT_ITCH_FILE << "\n";
+    std::cout << "Total messages              : " << total << "\n";
+    std::cout << "Total bytes read            : " << reader.getTotalBytesRead() << "\n\n";
+
+    std::cout << "AddOrder (A)                : " << counts['A'] << "\n";
+    std::cout << "OrderExecuted (E)           : " << counts['E'] << "\n";
+    std::cout << "OrderExecutedWithPrice (C)  : " << counts['C'] << "\n";
+    std::cout << "OrderCancel (X)             : " << counts['X'] << "\n";
+    std::cout << "OrderDelete (D)             : " << counts['D'] << "\n";
+    std::cout << "OrderReplace (U)            : " << counts['U'] << "\n\n";
+
+    std::cout << "Error rate                  : " << std::setprecision(4)
+            << (100.0 * errors / total) << "%\n";
     std::cout << "============================================\n";
+
+    outfile.close();
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";

@@ -27,7 +27,7 @@ int main() {
     // Open the input test file
     // --------------------------------------------------------------
     std::ifstream infile("data/testing_set.dat");
-    std::ofstream outfile("result/out_bs.dat");
+    // std::ofstream outfile("result/out_bs.dat");
 
     if (!infile.is_open()) {
         std::cerr << "ERROR: Could not open data/testing_set.dat\n";
@@ -104,14 +104,15 @@ int main() {
                   << " | Status="  << (pass ? "PASS" : "FAIL")
                   << "\n";
 
-        // Log result
-        outfile << "S=" << S
-                << "  HW(Call)=" << call_hw << "  Exp(Call)=" << call_exp
-                << "  HW(Put)="  << put_hw  << "  Exp(Put)="  << put_exp
-                << "  Status=" << (pass ? "PASS" : "FAIL") << "\n";
+        // // Log result
+        // outfile << "S=" << S
+        //         << "  HW(Call)=" << call_hw << "  Exp(Call)=" << call_exp
+        //         << "  HW(Put)="  << put_hw  << "  Exp(Put)="  << put_exp
+        //         << "  Status=" << (pass ? "PASS" : "FAIL") << "\n";
     }
 
     // Report overall error out of all testing instances
+    std::cout << "\n";
     std::cout << "============================================\n";
     std::cout << " Black–Scholes FPGA Testbench Summary\n";
     std::cout << "============================================\n";
@@ -122,7 +123,7 @@ int main() {
               << (100.0 * errors / N) << "%\n";
     std::cout << "============================================\n";
 
-    outfile.close();
+    // outfile.close();
 
     return 0;
 }

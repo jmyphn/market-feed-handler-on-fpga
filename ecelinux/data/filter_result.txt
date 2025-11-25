@@ -1,7 +1,0 @@
-AddOrder               (A): 404482
-OrderExecuted          (E): 1071
-OrderExecutedWithPrice (C): 0
-OrderCancel            (X): 148370
-OrderDelete            (D): 398172
-OrderReplace           (U): 47905
-TOTAL                     : 1000000

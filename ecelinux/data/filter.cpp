@@ -9,7 +9,7 @@ using namespace std;
 
 bool is_allowed(unsigned char t) {
     return t == 'A' || t == 'E' || t == 'C' || t == 'X' ||
-           t == 'D' || t == 'U';    // t == 'P'
+           t == 'D' || t == 'U';
 }
 
 class Reader {
@@ -56,13 +56,14 @@ public:
 };
 
 int main(int argc, char** argv) {
-    if (argc != 3) {
-        cerr << "Usage: ./filter <input or input.gz> <output>\n";
+    if (argc < 4) {
+        std::cerr << "Usage: ./filter <input> <output> <MAX>\n";
         return 1;
     }
 
     const char* input_path  = argv[1];
     const char* output_path = argv[2];
+    int MAX = std::atoi(argv[3]);
 
     Reader reader(input_path);
     if (!reader.good()) {
@@ -76,13 +77,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Maximum messages to write
-    const uint64_t MAX_MESSAGES = 1'000'000;
-
     uint64_t countA=0, countE=0, countC=0, countX=0,
-             countD=0, countU=0, total=0;   // countP=0
+             countD=0, countU=0, total=0;
 
-    while (total < MAX_MESSAGES) {
+    while (total < MAX) {
         unsigned char lenbuf[2];
 
         if (!reader.read(lenbuf, 2)) break;
@@ -115,7 +113,6 @@ int main(int argc, char** argv) {
     cout << "OrderCancel            (X): " << countX << endl;
     cout << "OrderDelete            (D): " << countD << endl;
     cout << "OrderReplace           (U): " << countU << endl;
-    // cout << "Trade                  (P): " << countP << endl;
     cout << "TOTAL                     : " << total << endl;
 
     return 0;

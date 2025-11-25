@@ -39,12 +39,16 @@ void hft(
         bit32_t w6 = itch_parsed.read();
 
         p.type = (ap_uint<8>)w0(7,0);
-        std::cout << "Type " << (char)p.type << " | ";
         p.side = (ap_uint<8>)w0(15,8);
         p.order_id     = ((ap_uint<64>)((uint32_t)w1), (uint32_t)w2);
         p.new_order_id = ((ap_uint<64>)((uint32_t)w3), (uint32_t)w4);
         p.shares = (uint32_t)w5;
         p.price  = (uint32_t)w6;
+
+        std::cout << "Type " << (char)p.type << " | ";
+        double price_display = p.price / 10000.0;
+        std::cout << std::fixed << std::setprecision(4)
+                << "Msg Price=" << std::setw(8) << price_display << " | ";
 
         msg_stream.write(p);
     }
@@ -60,8 +64,8 @@ void hft(
 
         // Convert fixed-point to float
         float spot_price = (float)spot_bits / 10000.0f;
-        std::cout << std::fixed << std::setprecision(4)
-                    << "Spot Price=" << spot_price << " | ";
+        std::cout << std::fixed << std::setprecision(4) 
+                    << "Spot Price=" << std::setw(8) << spot_price << " | ";
 
         // Convert float -> IEEE754 bits for DUT
         union { float f; uint32_t u; } conv;
