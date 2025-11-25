@@ -23,7 +23,7 @@ struct ParsedMessage {
 };
 
 // Top function for synthesis
-void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out);
+void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out);
 
 // Top function for parser
 ParsedMessage parser(char* buffer);

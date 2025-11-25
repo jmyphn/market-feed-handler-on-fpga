@@ -24,7 +24,7 @@ static inline ap_uint<32> read_u32_be(const char* p) {
     return v;
 }
 
-void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
+void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     // Input processing
     bit32_t hdr    = strm_in.read();
     uint16_t msg_len = (uint16_t)hdr(15, 0);
@@ -123,8 +123,8 @@ ParsedMessage parser(char* buffer) {
 
     // ---------------- Order Replace ('U') -------------
     case ITCH::OrderReplaceMessageType: {
-        out.order_id     = read_u64_be(buffer + 11); 
-        out.new_order_id = read_u64_be(buffer + 19); 
+        out.order_id     = read_u64_be(buffer + 11);
+        out.new_order_id = read_u64_be(buffer + 19);
         out.shares       = read_u32_be(buffer + 27);
         out.price        = read_u32_be(buffer + 31);
         break;

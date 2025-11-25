@@ -1,5 +1,5 @@
 #include "itch.hpp"
-#include "itch_reader.hpp"    
+#include "itch_reader.hpp"
 #include "itch_common.hpp"
 
 #include <hls_stream.h>
@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <iostream>
 #include <unordered_map>
-#include <endian.h>   
+#include <endian.h>
 
 static const char* INPUT_ITCH_FILE = "./data/itch_test_in";
 
@@ -58,7 +58,7 @@ int main() {
             uint16_t net_len = *(const uint16_t*)(msg);
             uint16_t msg_len = be16toh(net_len);
             const unsigned char* payload = reinterpret_cast<const unsigned char*>(msg + 2);
-            
+
             // Expected fields
             bit32_t type = payload[0];
             bit32_t order_id_hi = (payload[11] << 24) | (payload[12] << 16) |
@@ -103,12 +103,12 @@ int main() {
                                 (payload[34] << 8)  | payload[35];           // 4 bytes
 
                 // Print all fields in a single line
-                std::cout << std::hex << std::setfill('0') 
+                std::cout << std::hex << std::setfill('0')
                         << "Type: " << std::setw(2) << (unsigned int)messageType << " "
                         << "OrderRef: " << std::setw(16) << orderRef << " "
                         << "Side: " << side << " "
                         << "Shares: " << std::setw(8) << shares << " "
-                        << "Price: " << std::setw(8) << price 
+                        << "Price: " << std::setw(8) << price
                         << std::dec << std::endl; // reset to decimal
             }
 
@@ -123,7 +123,7 @@ int main() {
 
             bit32_t hdr = 0; hdr(15, 0) = msg_len;
             in_stream.write(hdr);
-            
+
             // Pack 4 bytes per stream word
             for (int i = 0; i < msg_len; i+=4) {
                 bit32_t w = 0;
@@ -133,8 +133,8 @@ int main() {
                 w(7,0)   = (i+3 < msg_len) ? payload[i+3] : 0;
                 in_stream.write(w);
             }
-            dut(in_stream, out_stream);
-            
+            itch_dut(in_stream, out_stream);
+
             // Read all 7 words to drain the stream
             std::cout << "--> ";
             for (int i = 0; i < 7; i++) {

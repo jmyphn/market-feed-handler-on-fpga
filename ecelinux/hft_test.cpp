@@ -1,13 +1,16 @@
 #include "itch.hpp"
-#include "itch_reader.hpp"    
+#include "itch_defs.h"
+#include "itch_reader.hpp"
 #include "itch_common.hpp"
+#include "orderbook.hpp"
+#include "blackscholes.hpp"
 
 #include <hls_stream.h>
 #include <ap_int.h>
 #include <cstdint>
 #include <iostream>
 #include <unordered_map>
-#include <endian.h>   
+#include <endian.h>
 
 static const char* INPUT_ITCH_FILE = "./data/filtered_data_500";
 
@@ -40,6 +43,31 @@ static const char* type_name(ITCH::MessageType_t t) {
     }
 }
 
+void make_parsed_message(hls::stream<bit32_t> &in_stream, hls::stream<ParsedMessage> &out_stream) {
+  ParsedMessage pm;
+  pm.type = in_stream.read();
+  pm.side = in_stream.read();
+  pm.order_id = in_stream.read();
+  pm.new_order_id = in_stream.read();
+  pm.shares = in_stream.read();
+  pm.price = in_stream.read();
+  out_stream.write(pm);
+}
+
+void top_dut(hls::stream<bit32_t> &in_stream, hls::stream<bit32_t> &out_stream) {
+  hls::stream<bit32_t> itch_out_stream;
+  hls::stream<ParsedMessage> orderbook_in_stream;
+  hls::stream<bit32_t> orderbook_bs_stream;
+
+#pragma hls dataflow
+  itch_dut(in_stream, itch_out_stream);
+  make_parsed_message(itch_out_stream, orderbook_in_stream);
+  orderbook(orderbook_in_stream, orderbook_bs_stream);
+  dut(orderbook_bs_stream, out_stream);
+}
+
+
+
 int main() {
     try {
         ITCH::Reader reader(INPUT_ITCH_FILE, 16384);
@@ -58,7 +86,7 @@ int main() {
             uint16_t net_len = *(const uint16_t*)(msg);
             uint16_t msg_len = be16toh(net_len);
             const unsigned char* payload = reinterpret_cast<const unsigned char*>(msg + 2);
-            
+
             // // Print message details (for debugging)
             // std::cout << "Type: " << t << ", Length: " << msg_len << ", Payload: ";
             // for (int i = 0; i < msg_len; i++) {
@@ -70,7 +98,7 @@ int main() {
 
             bit32_t hdr = 0; hdr(15, 0) = msg_len;
             in_stream.write(hdr);
-            
+
             // Pack 4 bytes per stream word
             for (int i = 0; i < msg_len; i+=4) {
                 bit32_t w = 0;
@@ -80,8 +108,9 @@ int main() {
                 w(31, 24)   = (i+3 < msg_len) ? payload[i+3] : 0;
                 in_stream.write(w);
             }
-            dut(in_stream, out_stream);
-            
+
+            top_dut(in_stream, out_stream);
+
             // // Read all 7 words to drain the stream
             // // std::cout << "--> ";
             // for (int i = 0; i < 7; i++) {
@@ -91,11 +120,17 @@ int main() {
             // }
             // // std::cout << std::dec << "\n\n"; // reset back to decimal
 
-            for (int i = 0; i < 2; i++) {
-                bit32_t out_word = out_stream.read();
-                std::cout << "Result: " << out_word << "\n";
-            }
+            // for (int i = 0; i < 2; i++) {
+            //     bit32_t out_word = out_stream.read();
+            //     std::cout << "Result: " << out_word << "\n";
+            // }
         }
+
+        while (!out_stream.empty()) {
+          bit32_t out_word = out_stream.read();
+          std::cout << "Result: " << out_word << "\n";
+        }
+
 
         // // Summary only
         // std::cout << "Parsed file: " << INPUT_ITCH_FILE << "\n";

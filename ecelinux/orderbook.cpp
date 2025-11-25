@@ -92,9 +92,9 @@ void orderbook(hls::stream<ParsedMessage> &orders,
   static priority_queue ask_pq;
   static hash_tbl ask_shares;
 
-#if ASSERT
-  assert(!orders.empty());
-#endif
+// #if ASSERT
+//   assert(!orders.empty());
+// #endif
 
   ParsedMessage order = orders.read();
   priority_queue &curr_pq = (order.side == 'b') ? bid_pq : ask_pq;
@@ -125,10 +125,11 @@ void orderbook(hls::stream<ParsedMessage> &orders,
     break;
 
   default:
-#if ASSERT
+    break;
+// #if ASSERT
     // message type is probably not implemented
-    assert(false);
-#endif
+    // assert(false);
+// #endif
   }
 
   // Output a spot price
