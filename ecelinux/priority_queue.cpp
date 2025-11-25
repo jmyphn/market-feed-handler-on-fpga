@@ -56,15 +56,20 @@ ParsedMessage &pq_top(priority_queue &pq) {
 }
 
 void pq_push(priority_queue &pq, ParsedMessage &order) {
+  // std::cerr << "inserting to pq order " << order.order_id << std::endl;
   pq.heap[pq.size] = order;
   int insert_level = level_of_idx(pq.size);
+  int curr = pq.size;
   for (int i = insert_level; i > 0; --i) {
-    int parent = parent_idx(pq.size);
-    if (cmp(order, pq.heap[parent])) {
-      std::swap(pq.heap[pq.size], pq.heap[parent]);
+    int parent = parent_idx(curr);
+    if (cmp(pq.heap[curr], pq.heap[parent])) {
+      std::swap(pq.heap[curr], pq.heap[parent]);
+      curr = parent;
     } else
       break;
   }
+  // std::cerr << "top order is now " << pq.heap[0].order_id << " with price "
+  //           << pq.heap[0].price << std::endl;
   pq.size++;
 }
 
@@ -90,6 +95,5 @@ void pq_pop(priority_queue &pq) {
 
     std::swap(pq.heap[curr], pq.heap[best]);
     curr = best;
-  }
-  ;
+  };
 }

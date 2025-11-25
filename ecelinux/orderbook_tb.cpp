@@ -24,6 +24,7 @@ int main() {
       ParsedMessage{ITCH::AddOrderMessageType, 'b', 1, X, 2, 9},
       ParsedMessage{ITCH::AddOrderMessageType, 'b', 2, X, 3, 11},
       ParsedMessage{ITCH::OrderDeleteMessageType, 'b', 2, X, X, X},
+      ParsedMessage{ITCH::OrderDeleteMessageType, 'b', 0, X, X, X},
   };
   for (int i = 0; i < sizeof(test_inputs) / sizeof(ParsedMessage); ++i) {
     test_stream.write(test_inputs[i]);
@@ -31,7 +32,7 @@ int main() {
 
   // Outputs
   hls::stream<bit32_t> spot_price_stream;
-  bit32_t expected[] = {10, 10, 11, 10};
+  bit32_t expected[] = {10, 10, 11, 10, 9};
 
   // Simulate the tests
   while (!test_stream.empty()) {

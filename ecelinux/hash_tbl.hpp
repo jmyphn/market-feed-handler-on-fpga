@@ -19,12 +19,12 @@ struct hash_entry {
   hash_state state;
 };
 
-typedef hash_entry hash_tbl[CAPACITY];
+typedef hash_entry hash_tbl[2 * CAPACITY];
 
 /**
  * Tries to find it in the table. Returns nullptr if nothing is found.
  */
-hash_entry *hash_tbl_lookup(hash_entry tbl[CAPACITY], key_type key);
+hash_entry *hash_tbl_lookup(hash_tbl tbl, key_type key);
 
 /**
  * Adds a new key, value pair. Assumes key is not in the table.

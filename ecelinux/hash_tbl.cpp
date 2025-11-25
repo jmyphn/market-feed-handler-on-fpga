@@ -24,8 +24,9 @@ hash_entry *hash_tbl_lookup(hash_tbl tbl, key_type key) {
 void hash_tbl_put(hash_tbl tbl, key_type key, val_type val) {
   ap_uint<16> idx = hash_func(key);
   for (int i = 0; i < CAPACITY; i++) {
-    // bit-arithmetic to check if its TOMBSTONE or EMPTY
-    if (~(tbl[key].state & 0)) {
+    if (tbl[idx].state == TOMBSTONE || tbl[idx].state == EMPTY) {
+      // std::cerr << "Putting " << key << " to idx " << idx << " with value "
+      //           << val << std::endl;
       tbl[idx].key = key;
       tbl[idx].value = val;
       tbl[idx].state = VALID;
