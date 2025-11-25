@@ -53,12 +53,18 @@ void hft(
         orderbook(msg_stream, spot_stream);
     }
 
-    // Black-scholes
+    // Black-Scholes
     if (!spot_stream.empty()) {
         bit32_t spot_bits = spot_stream.read();
 
+        // Convert fixed-point to float
+        float spot_price = (float)spot_bits / 10000.0f;
+        std::cout << std::fixed << std::setprecision(4)
+                    << "Spot Price=" << spot_price << " | ";
+
+        // Convert float -> IEEE754 bits for DUT
         union { float f; uint32_t u; } conv;
-        conv.u = (uint32_t)spot_bits;
+        conv.f = spot_price;
 
         hls::stream<bit32_t> bs_in;
         bs_in.write((bit32_t)conv.u);
@@ -72,4 +78,5 @@ void hft(
         call_out.write(call_bits);
         put_out.write(put_bits);
     }
+
 }

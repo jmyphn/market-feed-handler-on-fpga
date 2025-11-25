@@ -147,5 +147,5 @@ void orderbook(hls::stream<ParsedMessage> &orders,
   // std::endl;
 
   spot_prices.write(spot_price);
-  std::cerr << "Order outputting spot_price of " << spot_price << std::endl;
+  // std::cerr << "Order outputting spot_price of " << spot_price << std::endl;
 }
