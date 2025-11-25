@@ -1,4 +1,5 @@
 #include "typedefs.h"
+#include "itch.hpp"
 
 /*
  * Simple implementation of priority queue using an array.

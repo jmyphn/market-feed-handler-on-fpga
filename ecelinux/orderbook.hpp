@@ -1,3 +1,4 @@
+#include "itch.hpp"
 #include <cfloat>
 #include <hls_stream.h>
 #include <ap_int.h>
