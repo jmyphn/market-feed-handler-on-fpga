@@ -133,7 +133,11 @@ int main() {
                     case 3: pass = (new_order_hi == out_word); break; 
                     case 4: pass = (new_order_lo == out_word); break; 
                     case 5: pass = (shares == out_word);break; 
-                    case 6: pass = (price == out_word);break; 
+                    case 6: {
+                        pass = (price == out_word);
+                        // std::cout << "| Spot Price=" << std::fixed << std::setprecision(4) << out_word;
+                        break; 
+                    }
                 }
                 if (!pass) errors++;
                 std::cout << std::hex << std::setw(8) << std::setfill('0')
