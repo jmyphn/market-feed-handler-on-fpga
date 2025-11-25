@@ -66,8 +66,7 @@ void pq_push(priority_queue &pq, ParsedMessage &order) {
     if (cmp(pq.heap[curr], pq.heap[parent])) {
       std::swap(pq.heap[curr], pq.heap[parent]);
       curr = parent;
-    } else
-      break;
+    }
   }
   // std::cerr << "top order is now " << pq.heap[0].order_id << " with price "
   //           << pq.heap[0].price << std::endl;

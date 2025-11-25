@@ -142,6 +142,7 @@ void orderbook(hls::stream<ParsedMessage> &orders,
     //   // message type is probably not implemented
     //   assert(false);
     break;
+
     // #endif
   }
 
@@ -154,5 +155,6 @@ void orderbook(hls::stream<ParsedMessage> &orders,
   else if (ask_pq.size == 0)
     spot_price = pq_top(bid_pq).price;
   else
-    spot_prices.write((pq_top(ask_pq).price + pq_top(bid_pq).price) << 1);
+    spot_price = (pq_top(ask_pq).price + pq_top(bid_pq).price) << 1;
+  spot_prices.write(spot_price);
 }
