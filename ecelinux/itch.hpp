@@ -7,7 +7,7 @@
 #define ITCH_H
 // #include "itch_reader.hpp"
 #include "itch_common.hpp"
-#include "typedefs.h"
+#include "itch_defs.h"
 #include <hls_stream.h>
 #include <cstdint>
 

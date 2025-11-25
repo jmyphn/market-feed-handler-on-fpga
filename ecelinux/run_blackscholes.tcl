@@ -15,6 +15,7 @@ set_top dut
 # Add design and testbench files
 add_files blackscholes.cpp -cflags "-std=c++11"
 add_files -tb blackscholes_test.cpp -cflags "-std=c++11"
+add_files -tb data
 
 open_solution "solution1"
 # Use Zynq device
