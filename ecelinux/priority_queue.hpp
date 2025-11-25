@@ -11,11 +11,12 @@
  *  7
  */
 struct priority_queue {
-  ParsedMessage heap[CAPACITY];  // OPT: one way to optimize is to store in levels
-  int   size;  // TODO: change this to a smaller ap_uint
+  ParsedMessage
+      heap[CAPACITY]; // OPT: one way to optimize is to store in levels
+  int size;           // TODO: change this to a smaller ap_uint
 };
 
-ParsedMessage& pq_top(priority_queue &pq);
+ParsedMessage &pq_top(priority_queue &pq);
 
 /*
  * Pushes new_order into pq.
@@ -23,4 +24,7 @@ ParsedMessage& pq_top(priority_queue &pq);
  */
 void pq_push(priority_queue &pq, ParsedMessage &order);
 
+/**
+ * Removes the top element in `pq`.
+ */
 void pq_pop(priority_queue &pq);

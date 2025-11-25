@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "hash_tbl.hpp"
+#include "itch_common.hpp"
 #include "orderbook.hpp"
 #include "priority_queue.hpp"
 #include "typedefs.h"
@@ -9,7 +10,7 @@
 
 /*
  * If pq is at max size, remove an arbitrary element that's not the biggest.
- * Also deletes its corresponding element from the hashtablej
+ * Also deletes its corresponding element from the hashtable
  * POST: pq is not at full capacity
  */
 void keep_slim(priority_queue &pq, hash_tbl tbl) {
@@ -18,21 +19,34 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
     --pq.size;
     std::cerr << "Keeping slim" << std::endl;
     ParsedMessage &order = pq.heap[pq.size];
-    hash_tbl_remove(tbl, order.order_id);
+    hash_entry *entry = hash_tbl_lookup(tbl, order.order_id);
+#if ASSERT
+    assert(entry != nullptr);
+#endif
+    entry->value = 0;
+    entry->state = TOMBSTONE;
   }
 }
 
-void balance(priority_queue &pq, hash_tbl tbl) {
+/**
+ * This function removes the head of `pq` if it has 0 shares, as tracked by
+ * `tbl`. It'll keep removing heads until `pq` is empty, or the head has some
+ * shares left. Removing a head will also delete its corresponding entry in
+ * `tbl`.
+ */
+void balance(priority_queue &pq, hash_tbl &tbl) {
+  std::cerr << "Initiate balancing" << std::endl;
   while (pq.size > 0) {
     ParsedMessage top_order = pq_top(pq);
     hash_entry *top_entry = hash_tbl_lookup(tbl, top_order.order_id);
 #if ASSERT
     assert(top_entry != nullptr);
 #endif
-    if (top_entry->value >= 0) {
+    if (top_entry->value > 0) {
       break;
     } else {
       // remove from hash table
+      std::cerr << "Removing order " << top_entry->key << std::endl;
       top_entry->value = 0;
       top_entry->state = TOMBSTONE;
       pq_pop(pq);
@@ -40,7 +54,11 @@ void balance(priority_queue &pq, hash_tbl tbl) {
   }
 }
 
-void remove_shares(priority_queue &pq, hash_tbl tbl, key_type order_id,
+/**
+ * Removes shares from an entry in the orderbook based on `order_id`. Share
+ * count will not drop below 0. Will call `balance` afterwards.
+ */
+void remove_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id,
                    val_type shares) {
   hash_entry *curr_entry = hash_tbl_lookup(tbl, order_id);
 #if ASSERT
@@ -52,6 +70,19 @@ void remove_shares(priority_queue &pq, hash_tbl tbl, key_type order_id,
     curr_entry->value = 0;
     balance(pq, tbl);
   }
+}
+
+/**
+ * Removes all shares from a given order based on `order_id`. Will call
+ * `balance` after.
+ */
+void remove_all_shares(priority_queue &pq, hash_tbl &tbl, key_type order_id) {
+  hash_entry *curr_entry = hash_tbl_lookup(tbl, order_id);
+#if ASSERT
+  assert(curr_entry != nullptr);
+#endif
+  curr_entry->value = 0;
+  balance(pq, tbl);
 }
 
 void orderbook(hls::stream<ParsedMessage> &orders,
@@ -71,16 +102,27 @@ void orderbook(hls::stream<ParsedMessage> &orders,
 
   // Process order depending on type
   switch (order.type) {
-  case 'A': // Add Order Message
+  case ITCH::AddOrderMessageType: // Add Order Message
     keep_slim(curr_pq, curr_shares);
     pq_push(curr_pq, order);
     hash_tbl_put(curr_shares, order.order_id, order.shares);
     break;
 
-  case 'E': // Order Executed Message
+  case ITCH::OrderExecutedMessageType:
+  case ITCH::OrderExecutedWithPriceMessageType:
+  case ITCH::OrderCancelMessageType:
     remove_shares(curr_pq, curr_shares, order.order_id, order.shares);
+    break;
 
-    // TODO: rest of the cases
+  case ITCH::OrderDeleteMessageType:
+    remove_all_shares(curr_pq, curr_shares, order.order_id);
+    break;
+
+  case ITCH::OrderReplaceMessageType:
+    remove_all_shares(curr_pq, curr_shares, order.order_id);
+    pq_push(curr_pq, order);
+    hash_tbl_put(curr_shares, order.order_id, order.shares);
+    break;
 
   default:
 #if ASSERT

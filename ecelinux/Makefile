@@ -4,11 +4,8 @@
 # @brief: A makefile the compiles and synthesizes the feed handler program
 #
 # @desc: 1. "make" runs csim by default
-#        2. "make itch_csim" compiles & executes the ITCH parser
-#        3. "make orderbook_csim" compiles & executes the orderbook
-#        4. "make bs_csim" compiles & executes the Black-Scholes algorithm
-#        4. "make hft_csim" compiles & executes the HFT
-#        5. "make clean" cleans up the directory
+#        2. "make csim" compiles & executes the software implementation
+#        3. "make clean" cleans up the directory
 
 XILINX_VIVADO?=/opt/xilinx/Vivado/2019.2
 XIL_HLS=source $(XILINX_VIVADO)/settings64.sh; vivado_hls
@@ -66,6 +63,17 @@ result/hft_csim.txt: hft
 hft_csim: result/hft_csim.txt
 	@echo "Result recorded to $<"
 
+ob: orderbook.cpp priority_queue.cpp hash_tbl.cpp orderbook_tb.cpp
+	g++ ${CFLAGS} $^ -o $@ -lrt
+
+result/csim_ob.txt: ob
+	@echo "Running orderbook sim..."
+	mkdir -p result
+	./$< | tee $@
+
+csim_ob: result/csim_ob.txt
+	@echo "Result recorded to $<"
+
 xillydemo.bit:
 	@echo "================================================================="
 	@echo "Synthesizing HFT and creating bitstream with $(TCL_SCRIPT)..."
@@ -77,5 +85,5 @@ bitstream: xillydemo.bit
 	@echo "Bitstream saved to $<"
 
 clean:
-	rm -rf itch bs orderbook hft *.dat *.prj *.log
+	rm -rf itch bs ob hft *.dat *.prj *.log
 	rm -rf zedboard_project* xillydemo.bit
