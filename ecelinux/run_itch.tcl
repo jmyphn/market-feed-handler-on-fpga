@@ -10,7 +10,7 @@ set hls_prj itch.prj
 open_project ${hls_prj} -reset
 
 # Top function of the design is "dut"
-set_top dut
+set_top itch_dut
 
 # Add design and testbench files
 add_files itch.cpp -cflags "-std=c++11"

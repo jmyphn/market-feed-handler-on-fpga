@@ -8,17 +8,17 @@ ap_uint<16> hash_func(key_type key) {
   return ((uint32_t)key * A) % CAPACITY; // keep top 12 bits → 0..4095
 }
 
-hash_entry *hash_tbl_lookup(hash_tbl tbl, key_type key) {
+int hash_tbl_lookup(hash_tbl tbl, key_type key) {
   ap_uint<16> idx = hash_func(key);
   for (int i = 0; i < CAPACITY; i++) {
     // TODO: find better probing pattern
     if (tbl[idx].state == VALID && tbl[idx].key == key) {
-      return &tbl[idx];
+      return idx;
     } else if (tbl[idx].state == EMPTY)
       break;
     idx = (idx + 1) % CAPACITY;
   }
-  return nullptr;
+  return -1;
 }
 
 void hash_tbl_put(hash_tbl tbl, key_type key, val_type val) {

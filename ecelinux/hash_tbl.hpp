@@ -22,9 +22,10 @@ struct hash_entry {
 typedef hash_entry hash_tbl[2 * CAPACITY];
 
 /**
- * Tries to find it in the table. Returns nullptr if nothing is found.
+ * Tries to find it in the table. Returns its corresponding index. Returns -1 if
+ * nothing is found.
  */
-hash_entry *hash_tbl_lookup(hash_tbl tbl, key_type key);
+int hash_tbl_lookup(hash_tbl tbl, key_type key);
 
 /**
  * Adds a new key, value pair. Assumes key is not in the table.
