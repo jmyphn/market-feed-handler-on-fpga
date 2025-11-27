@@ -157,8 +157,4 @@ void orderbook(hls::stream<ParsedMessage> &orders,
   else
     spot_price = (pq_top(ask_pq).price + pq_top(bid_pq).price) << 1;
   spot_prices.write(spot_price);
-<<<<<<< HEAD
-  // std::cerr << "Order outputting spot_price of " << spot_price << std::endl;
-=======
->>>>>>> tean/orderbook
 }
