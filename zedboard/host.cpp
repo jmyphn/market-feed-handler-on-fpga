@@ -1,0 +1,104 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <math.h>
+#include <assert.h>
+
+#include <iostream>
+#include <fstream>
+
+#include "blackscholes.hpp"
+#include "itch.hpp"
+#include "priority_queue.hpp"
+#include "orderbook.hpp"
+#include "timer.h"
+
+#include "itch_reader.hpp"
+
+//--------------------------------------
+// main function
+//--------------------------------------
+int main(int argc, char **argv) {
+  // Open channels to the FPGA board.
+  // These channels appear as files to the Linux OS
+  int fdr = open("/dev/xillybus_read_32", O_RDONLY);
+  int fdw = open("/dev/xillybus_write_32", O_WRONLY);
+
+  // Check that the channels are correctly opened
+  if ((fdr < 0) || (fdw < 0)) {
+    fprintf(stderr, "Failed to open Xillybus device channels\n");
+    exit(-1);
+  }
+
+  // Timer
+  Timer timer("FPGA Communication");
+
+  // Use ITCH Reader to open and parse a data file
+  // NOTE: The path is relative to where the executable is run from
+  const char* data_file = "data/12302019/filtered_500";
+  ITCH::Reader reader(data_file);
+  if (!reader.isOpen()) {
+      std::cerr << "Failed to open data file: " << data_file << std::endl;
+      return -1;
+  }
+
+  std::cout << "Sending ITCH messages to FPGA..." << std::endl;
+
+  const char* buffer;
+  int nbytes;
+  int messages_sent = 0;
+
+  timer.start();
+
+  // Loop through all messages in the file
+  while ((buffer = reader.nextMessage())) {
+      uint16_t message_length = ITCH::Parser::getMessageLength(buffer);
+      
+      // 1. Send the message length (as a 32-bit integer)
+      uint32_t length_to_send = message_length;
+      nbytes = write(fdw, (void*)&length_to_send, sizeof(length_to_send));
+      assert(nbytes == sizeof(length_to_send));
+
+      // 2. Send the message body, word by word (32-bit)
+      // The message from the reader does not include the length field
+      for (int i = 0; i < ceil(message_length / 4.0); ++i) {
+          uint32_t word = 0;
+          // Copy up to 4 bytes into a 32-bit word
+          memcpy(&word, buffer + 2 + i * 4, std::min(4, message_length - i * 4));
+          nbytes = write(fdw, (void*)&word, sizeof(word));
+          assert(nbytes == sizeof(word));
+      }
+      messages_sent++;
+  }
+
+  std::cout << "All messages sent. Waiting for results from FPGA..." << std::endl;
+
+  // Continuously read results from the FPGA
+  // The FPGA will send back Black-Scholes option prices when they are calculated.
+  // This loop will block until data is available.
+  float option_price;
+  int results_received = 0;
+  while (true) {
+      nbytes = read(fdr, (void*)&option_price, sizeof(option_price));
+      if (nbytes <= 0) {
+          // No more data or an error occurred
+          break;
+      }
+      assert(nbytes == sizeof(option_price));
+      std::cout << "Received Black-Scholes option price: " << option_price << std::endl;
+      results_received++;
+  }
+
+  timer.stop();
+
+  // Report 
+  std::cout << "Finished." << std::endl;
+  std::cout << "Sent " << messages_sent << " messages and received " << results_received << " results." << std::endl;
+
+  // Close the channels
+  close(fdr);
+  close(fdw);
+
+  return 0;
+}
