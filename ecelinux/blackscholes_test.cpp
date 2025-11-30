@@ -26,7 +26,7 @@ int main() {
     // --------------------------------------------------------------
     // Open the input test file
     // --------------------------------------------------------------
-    std::ifstream infile("data/testing_set.dat");
+    std::ifstream infile("data/bs_5.dat");
     // std::ofstream outfile("result/out_bs.dat");
 
     if (!infile.is_open()) {
