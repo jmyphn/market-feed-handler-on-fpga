@@ -1,7 +1,7 @@
 #=============================================================================
-# run_base.tcl 
+# run_hft.tcl 
 #=============================================================================
-# @brief: A Tcl script for synthesizing the baseline digit recongnition design.
+# @brief: A Tcl script for synthesizing the full-system design.
 
 # Project name
 set hls_prj hft.prj

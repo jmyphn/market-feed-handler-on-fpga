@@ -1,7 +1,7 @@
 #=============================================================================
-# run_base.tcl 
+# run_blackscholes.tcl 
 #=============================================================================
-# @brief: A Tcl script for synthesizing the baseline digit recongnition design.
+# @brief: A Tcl script for synthesizing the black-scholes design.
 
 # Project name
 set hls_prj blackscholes.prj
