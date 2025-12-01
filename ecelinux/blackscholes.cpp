@@ -80,6 +80,16 @@ static theta_type normal_cdf(theta_type x) {
 // ---------------------------------------------------------------------
 // Black–Scholes pricing 
 // ---------------------------------------------------------------------
+static const theta_type invK     = 1.0f / K;
+static const theta_type sqrtT    = std::sqrt(T);
+static const theta_type inv_sqrtT = 1.0f / sqrtT;
+
+static const theta_type sigma      = v;
+static const theta_type sigma_sq   = v * v;
+static const theta_type denom      = sigma * sqrtT;
+static const theta_type inv_denom  = 1.0f / denom;
+
+
 void black_scholes_price(theta_type S_in, result_type &result) {
   #pragma HLS INLINE
   if (S_in <= 0 || K <= 0 || v <= 0 || T <= 0) {
@@ -88,17 +98,12 @@ void black_scholes_price(theta_type S_in, result_type &result) {
     return;
   }
 
-  theta_type sigma   = v;
-  theta_type sqrtT   = std::sqrt(T); 
-  theta_type S_over_K = S_in / K;
 
+  theta_type S_over_K = S_in * invK;
   theta_type log_S_over_K = custom_log<theta_type>(S_over_K);
-  theta_type sigma_sq     = sigma * sigma;
-
   theta_type numerator   = log_S_over_K + (r + 0.5f * sigma_sq) * T;
-  theta_type denominator = sigma * sqrtT;
 
-  theta_type d1 = numerator / denominator;
+  theta_type d1 = numerator * inv_denom;
   theta_type d2 = d1 - sigma * sqrtT;
 
   theta_type Nd1       = normal_cdf(d1);

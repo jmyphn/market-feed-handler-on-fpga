@@ -17,27 +17,23 @@ void hft(
 ) {
 #pragma HLS DATAFLOW
 
-    //
     // Internal streams
-    //
     static hls::stream<bit32_t>       itch_parsed("itch_parsed");
     static hls::stream<ParsedMessage> msg_stream("msg_stream");
     static hls::stream<bit32_t>       spot_stream("spot_stream");
 
-    // Streams for Black-Scholes (must be static + sized explicitly)
+    // Streams for Black-Scholes 
     static hls::stream<bit32_t> bs_in("bs_in");
     static hls::stream<bit32_t> bs_hw_out("bs_hw_out");
 
-#pragma HLS STREAM variable=itch_parsed depth=32
-#pragma HLS STREAM variable=msg_stream  depth=32
-#pragma HLS STREAM variable=spot_stream depth=32
-#pragma HLS STREAM variable=bs_in       depth=4
-#pragma HLS STREAM variable=bs_hw_out   depth=4
+    #pragma HLS STREAM variable=itch_parsed depth=32
+    #pragma HLS STREAM variable=msg_stream  depth=32
+    #pragma HLS STREAM variable=spot_stream depth=32
+    #pragma HLS STREAM variable=bs_in       depth=4
+    #pragma HLS STREAM variable=bs_hw_out   depth=4
 
 
-    //
-    // STEP 1: ITCH Parser
-    //
+    // ITCH Parser
     itch_dut(itch_in, itch_parsed);
 
     if (!itch_parsed.empty()) {
@@ -69,17 +65,13 @@ void hft(
     }
 
 
-    //
-    // STEP 2: Orderbook → spot price
-    //
+    // Orderbook 
     if (!msg_stream.empty()) {
         orderbook(msg_stream, spot_stream);
     }
 
 
-    //
-    // STEP 3: Black–Scholes pricing
-    //
+    // Black–Scholes pricing
     if (!spot_stream.empty()) {
 
         bit32_t spot_bits = spot_stream.read();
@@ -90,21 +82,15 @@ void hft(
                   << std::setw(8) << spot_price << " | ";
 #endif
 
-        //
         // Prepare input for Black-Scholes accelerator
-        //
         union { float f; uint32_t u; } conv;
         conv.f = spot_price;
         bs_in.write((bit32_t)conv.u);
 
-        //
         // Run HLS Black–Scholes DUT
-        //
         dut(bs_in, bs_hw_out);
 
-        //
         // Read outputs
-        //
         bit32_t call_bits = bs_hw_out.read();
         bit32_t put_bits  = bs_hw_out.read();
 
