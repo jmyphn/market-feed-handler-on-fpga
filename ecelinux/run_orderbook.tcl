@@ -1,4 +1,4 @@
-set hls_prj orderbook_proj
+set hls_prj orderbook.proj
 open_project ${hls_prj} -reset
 set_top orderbook
 

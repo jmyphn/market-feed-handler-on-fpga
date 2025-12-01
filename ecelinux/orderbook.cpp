@@ -39,7 +39,8 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
  * `tbl`.
  */
 void balance(priority_queue &pq, hash_tbl tbl) {
-  while (pq.size > 0) {
+  for (int i = 0; i < CAPACITY; ++i) {
+  // while (pq.size > 0) {
     ParsedMessage top_order = pq_top(pq);
     int idx = hash_tbl_lookup(tbl, top_order.order_id);
 #if ASSERT
@@ -54,6 +55,7 @@ void balance(priority_queue &pq, hash_tbl tbl) {
       top_entry.state = TOMBSTONE;
       pq_pop(pq);
     }
+    if (pq.size == 0) break;
   }
 }
 
