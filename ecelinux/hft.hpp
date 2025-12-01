@@ -3,6 +3,7 @@
 
 #include <hls_stream.h>
 #include <ap_int.h>
+#include <iomanip>
 
 #include "itch.hpp"
 #include "itch_common.hpp"
