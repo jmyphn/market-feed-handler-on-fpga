@@ -59,17 +59,15 @@ ParsedMessage &pq_top(priority_queue &pq) {
 void pq_push(priority_queue &pq, ParsedMessage &order) {
   // std::cerr << "inserting to pq order " << order.order_id << std::endl;
   pq.heap[pq.size] = order;
-  int insert_level = level_of_idx(pq.size);
   int curr = pq.size;
-  for (int i = insert_level; i > 0; --i) {
+  for (int i = level_of_idx(CAPACITY); i > 0; --i) {
     int parent = parent_idx(curr);
+    if (parent == 0) break;
     if (cmp(pq.heap[curr], pq.heap[parent])) {
       std::swap(pq.heap[curr], pq.heap[parent]);
       curr = parent;
     }
   }
-  // std::cerr << "top order is now " << pq.heap[0].order_id << " with price "
-  //           << pq.heap[0].price << std::endl;
   pq.size++;
 }
 
@@ -81,7 +79,8 @@ void pq_pop(priority_queue &pq) {
   --pq.size;
   std::swap(pq.heap[0], pq.heap[pq.size]);
   int curr = 0;
-  while (curr < pq.size) {
+  for (int i = 0; i < level_of_idx(CAPACITY); ++i) {
+  // while (curr < pq.size) {
     int l = 2 * curr + 1;
     int r = 2 * curr + 2;
     int best = curr;
@@ -95,5 +94,6 @@ void pq_pop(priority_queue &pq) {
 
     std::swap(pq.heap[curr], pq.heap[best]);
     curr = best;
+    if (curr >= pq.size) break;
   };
 }
