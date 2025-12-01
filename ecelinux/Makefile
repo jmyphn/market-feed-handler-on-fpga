@@ -63,13 +63,6 @@ result/hft_csim.txt: hft
 hft_csim: result/hft_csim.txt
 	@echo "Result recorded to $<"
 
-ob: orderbook.cpp priority_queue.cpp hash_tbl.cpp orderbook_tb.cpp
-	g++ ${CFLAGS} $^ -o $@ -lrt
-
-result/csim_ob.txt: ob
-	@echo "Running orderbook sim..."
-	mkdir -p result
-	./$< | tee $@
 
 csim_ob: result/csim_ob.txt
 	@echo "Result recorded to $<"
@@ -85,5 +78,5 @@ bitstream: xillydemo.bit
 	@echo "Bitstream saved to $<"
 
 clean:
-	rm -rf itch bs ob hft *.dat *.prj *.log
+	rm -rf itch bs orderbook hft *.dat *.prj *.log
 	rm -rf zedboard_project* xillydemo.bit
