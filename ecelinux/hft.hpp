@@ -12,9 +12,8 @@
 
 
 void dut(
-    hls::stream<bit32_t> &itch_in,
-    hls::stream<bit32_t> &call_out,
-    hls::stream<bit32_t> &put_out
+    hls::stream<bit32_t> &strm_in,   
+    hls::stream<bs_out_t> &strm_out  
 );
 
 #endif // HFT_HPP

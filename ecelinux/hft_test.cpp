@@ -8,10 +8,12 @@
 
 #include <hls_stream.h>
 
+typedef ap_uint<64> bs_out_t;
+
+// Updated DUT signature
 void dut(
-    hls::stream<bit32_t> &itch_in,
-    hls::stream<bit32_t> &call_out,
-    hls::stream<bit32_t> &put_out
+    hls::stream<bit32_t> &strm_in,
+    hls::stream<bs_out_t> &strm_out
 );
 
 static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_10_per_type";
@@ -26,9 +28,8 @@ int main() {
     try {
         ITCH::Reader reader(INPUT_ITCH_FILE, 16384);
 
-        hls::stream<bit32_t> itch_in;
-        hls::stream<bit32_t> call_out;
-        hls::stream<bit32_t> put_out;
+        hls::stream<bit32_t> strm_in;
+        hls::stream<bs_out_t> strm_out;
 
         const char* msg = nullptr;
         uint64_t total = 0;
@@ -41,33 +42,38 @@ int main() {
             const unsigned char* payload = (unsigned char*)(msg + 2);
 
             // Send header
-            itch_in.write(pack_header(len));
+            strm_in.write(pack_header(len));
 
-            // Pack message
+            // Pack ITCH message 32 bits per cycle
             for (int i = 0; i < len; i += 4) {
                 bit32_t w = 0;
                 w(31,24) = payload[i];
                 w(23,16) = (i+1 < len ? payload[i+1] : 0);
                 w(15,8)  = (i+2 < len ? payload[i+2] : 0);
                 w(7,0)   = (i+3 < len ? payload[i+3] : 0);
-                itch_in.write(w);
+                strm_in.write(w);
             }
 
-            // HFT dut
-            dut(itch_in, call_out, put_out);
+            // Run full HFT + Black-Scholes pipeline
+            dut(strm_in, strm_out);
 
-            if (!call_out.empty() && !put_out.empty()) {
+            // If we got a BS result this cycle, print it
+            if (!strm_out.empty()) {
+                bs_out_t packed = strm_out.read();
+
+                bit32_t call_bits = packed.range(31, 0);
+                bit32_t put_bits  = packed.range(63, 32);
+
                 union { float f; uint32_t u; } C, P;
-                C.u = (uint32_t)call_out.read();
-                P.u = (uint32_t)put_out.read();
+                C.u = (uint32_t)call_bits;
+                P.u = (uint32_t)put_bits;
 
                 std::cout << std::fixed << std::setprecision(6)
-                          << "Call=" << std::setw(9) << C.f 
+                          << "Call=" << std::setw(9) << C.f
                           << "  Put=" << std::setw(9) << P.f << "\n";
             }
         }
 
-        // Summary only
         std::cout << "\n";
         std::cout << "============================================\n";
         std::cout << " Interconnect FPGA Testbench Summary\n";

@@ -10,12 +10,14 @@
 #include <iomanip>
 #endif
 
+// Combined output type: pack call + put into 64 bits
+typedef ap_uint<64> bs_out_t;
+
 void dut(
-    hls::stream<bit32_t> &itch_in,
-    hls::stream<bit32_t> &call_out,
-    hls::stream<bit32_t> &put_out
+    hls::stream<bit32_t> &strm_in,   
+    hls::stream<bs_out_t> &strm_out  
 ) {
-    #pragma HLS DATAFLOW
+#pragma HLS DATAFLOW
 
     // Internal streams
     static hls::stream<bit32_t>       itch_parsed("itch_parsed");
@@ -26,15 +28,17 @@ void dut(
     static hls::stream<bit32_t> bs_in("bs_in");
     static hls::stream<bit32_t> bs_hw_out("bs_hw_out");
 
-    #pragma HLS STREAM variable=itch_parsed depth=32
-    #pragma HLS STREAM variable=msg_stream  depth=32
-    #pragma HLS STREAM variable=spot_stream depth=32
-    #pragma HLS STREAM variable=bs_in       depth=4
-    #pragma HLS STREAM variable=bs_hw_out   depth=4
+#pragma HLS STREAM variable=itch_parsed depth=32
+#pragma HLS STREAM variable=msg_stream  depth=32
+#pragma HLS STREAM variable=spot_stream depth=32
+#pragma HLS STREAM variable=bs_in       depth=4
+#pragma HLS STREAM variable=bs_hw_out   depth=4
 
 
-    // ITCH Parser
-    itch_dut(itch_in, itch_parsed);
+    // ---------------------------------------------------------------------
+    // Stage 1: ITCH Parser
+    // ---------------------------------------------------------------------
+    itch_dut(strm_in, itch_parsed);
 
     if (!itch_parsed.empty()) {
         ParsedMessage p;
@@ -65,13 +69,17 @@ void dut(
     }
 
 
-    // Orderbook 
+    // ---------------------------------------------------------------------
+    // Stage 2: Orderbook
+    // ---------------------------------------------------------------------
     if (!msg_stream.empty()) {
         orderbook(msg_stream, spot_stream);
     }
 
 
-    // Black–Scholes pricing
+    // ---------------------------------------------------------------------
+    // Stage 3: Black–Scholes
+    // ---------------------------------------------------------------------
     if (!spot_stream.empty()) {
 
         bit32_t spot_bits = spot_stream.read();
@@ -82,19 +90,26 @@ void dut(
                   << std::setw(8) << spot_price << " | ";
 #endif
 
-        // Prepare input for Black-Scholes accelerator
+        // Convert spot float → raw bits
         union { float f; uint32_t u; } conv;
         conv.f = spot_price;
         bs_in.write((bit32_t)conv.u);
 
-        // Run HLS Black–Scholes DUT
+        // Run BS accelerator
         bs_dut(bs_in, bs_hw_out);
 
         // Read outputs
         bit32_t call_bits = bs_hw_out.read();
         bit32_t put_bits  = bs_hw_out.read();
 
-        call_out.write(call_bits);
-        put_out.write(put_bits);
+        // ------------------------------------------------------------------
+        // Pack call + put into a single 64-bit output stream
+        // ------------------------------------------------------------------
+        bs_out_t out64;
+        out64.range(31,0)  = call_bits;
+        out64.range(63,32) = put_bits;
+
+        // Write packed output to the single Xillybus output stream
+        strm_out.write(out64);
     }
 }
