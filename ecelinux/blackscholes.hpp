@@ -31,6 +31,6 @@ void black_scholes_price(theta_type S_in, result_type &result);
 // Top-level HLS DUT:
 //   - strm_in:  1 x 32-bit word containing float-encoded spot price S
 //   - strm_out: 2 x 32-bit words containing float-encoded call, then put
-void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out);
+void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out);
 
 #endif // BLACKSCHOLES_H

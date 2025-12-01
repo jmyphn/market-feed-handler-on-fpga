@@ -8,7 +8,7 @@
 
 #include <hls_stream.h>
 
-void hft(
+void dut(
     hls::stream<bit32_t> &itch_in,
     hls::stream<bit32_t> &call_out,
     hls::stream<bit32_t> &put_out
@@ -53,8 +53,8 @@ int main() {
                 itch_in.write(w);
             }
 
-            // HFT
-            hft(itch_in, call_out, put_out);
+            // HFT dut
+            dut(itch_in, call_out, put_out);
 
             if (!call_out.empty() && !put_out.empty()) {
                 union { float f; uint32_t u; } C, P;

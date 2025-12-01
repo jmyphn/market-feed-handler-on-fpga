@@ -77,7 +77,7 @@ int main() {
 
         // Send spot price into DUT
         in_stream.write(float_to_bits(S));
-        dut(in_stream, out_stream);
+        bs_dut(in_stream, out_stream);
 
         // Get output
         float call_hw = bits_to_float(out_stream.read());

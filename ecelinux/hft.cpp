@@ -10,12 +10,12 @@
 #include <iomanip>
 #endif
 
-void hft(
+void dut(
     hls::stream<bit32_t> &itch_in,
     hls::stream<bit32_t> &call_out,
     hls::stream<bit32_t> &put_out
 ) {
-#pragma HLS DATAFLOW
+    #pragma HLS DATAFLOW
 
     // Internal streams
     static hls::stream<bit32_t>       itch_parsed("itch_parsed");
@@ -88,7 +88,7 @@ void hft(
         bs_in.write((bit32_t)conv.u);
 
         // Run HLS Black–Scholes DUT
-        dut(bs_in, bs_hw_out);
+        bs_dut(bs_in, bs_hw_out);
 
         // Read outputs
         bit32_t call_bits = bs_hw_out.read();

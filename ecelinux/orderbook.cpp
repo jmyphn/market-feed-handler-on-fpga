@@ -12,9 +12,7 @@
 #endif
 
 /*
- * If pq is at max size, remove one element that's not the biggest.
- * Also deletes its corresponding element from the hashtable.
- * POST: pq is not at full capacity
+ * If pq is full, drop last element (not max).
  */
 void keep_slim(priority_queue &pq, hash_tbl tbl) {
 #pragma HLS INLINE
@@ -22,49 +20,58 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
         --pq.size;
 
 #ifndef __SYNTHESIS__
-        std::cerr << "Keeping slim" << std::endl;
+        std::cerr << "Keeping slim\n";
 #endif
 
         ParsedMessage &order = pq.heap[pq.size];
         int idx = hash_tbl_lookup(tbl, order.order_id);
+
 #if ASSERT
         assert(idx != -1);
 #endif
+
         hash_entry &entry = tbl[idx];
         entry.value = 0;
         entry.state = TOMBSTONE;
     }
 }
 
+/*
+ * Fixed-bound BALANCE loop.
+ *
+ * Removes up to CAPACITY heads, but exits early.
+ */
 void balance(priority_queue &pq, hash_tbl tbl) {
 #pragma HLS INLINE off
+
 BALANCE_LOOP:
     for (int i = 0; i < CAPACITY; i++) {
-        // If priority queue empty, stop
+// #pragma HLS PIPELINE II=1
+        #pragma HLS UNROLL factor=16
+
         if (pq.size == 0) break;
 
         ParsedMessage top_order = pq_top(pq);
         int idx = hash_tbl_lookup(tbl, top_order.order_id);
+
 #if ASSERT
         assert(idx != -1);
 #endif
+
         hash_entry &top_entry = tbl[idx];
 
-        // If head has shares → balanced → exit
-        if (top_entry.value > 0) {
+        if (top_entry.value > 0)
             break;
-        }
 
-        // Otherwise remove head
         top_entry.value = 0;
         top_entry.state = TOMBSTONE;
+
         pq_pop(pq);
     }
 }
 
 /*
- * Removes shares from an entry in the orderbook based on order_id.
- * Shares cannot drop below zero.
+ * Remove shares from entry
  */
 void remove_shares(hash_tbl tbl, key_type order_id, val_type &shares) {
 #pragma HLS INLINE
@@ -79,7 +86,7 @@ void remove_shares(hash_tbl tbl, key_type order_id, val_type &shares) {
 }
 
 /*
- * Removes all shares from a given order.
+ * Remove all shares for an entry
  */
 void remove_all_shares(hash_tbl tbl, key_type order_id) {
 #pragma HLS INLINE
@@ -90,7 +97,9 @@ void remove_all_shares(hash_tbl tbl, key_type order_id) {
     }
 }
 
-
+/*
+ * Fully deterministic orderbook with fixed-bound loops.
+ */
 void orderbook(hls::stream<ParsedMessage> &orders,
                hls::stream<bit32_t> &spot_prices) {
 
@@ -102,10 +111,9 @@ void orderbook(hls::stream<ParsedMessage> &orders,
 
     ParsedMessage order = orders.read();
 
-    // Process order depending on type
     switch (order.type) {
 
-    case ITCH::AddOrderMessageType: // Add Order Message
+    case ITCH::AddOrderMessageType:
         if (order.side == 'b') {
             keep_slim(bid_pq, shares_per_order);
             pq_push(bid_pq, order);
@@ -149,11 +157,11 @@ void orderbook(hls::stream<ParsedMessage> &orders,
         break;
     }
 
-    // Output a spot price
+    // Compute spot price
     bit32_t spot_price;
 
     if (bid_pq.size == 0 && ask_pq.size == 0)
-        spot_price = 6767; // error marker
+        spot_price = 6767;
     else if (bid_pq.size == 0)
         spot_price = pq_top(ask_pq).price;
     else if (ask_pq.size == 0)

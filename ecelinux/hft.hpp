@@ -11,7 +11,7 @@
 #include "blackscholes.hpp"
 
 
-void hft(
+void dut(
     hls::stream<bit32_t> &itch_in,
     hls::stream<bit32_t> &call_out,
     hls::stream<bit32_t> &put_out

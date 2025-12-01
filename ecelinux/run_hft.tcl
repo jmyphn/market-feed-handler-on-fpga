@@ -9,8 +9,8 @@ set hls_prj hft.prj
 # Open/reset the project
 open_project ${hls_prj} -reset
 
-# Top function of the design is "hft"
-set_top hft
+# Top function of the design is "dut"
+set_top dut
 
 # Add design and testbench files
 add_files itch.cpp -cflags "-std=c++11"
