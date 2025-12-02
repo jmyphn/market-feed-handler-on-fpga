@@ -50,8 +50,6 @@ void itch_msg_handler(
         if (msg_type_char == 'A') {
             msg.type = MSG_ADD;
             msg.add.orderReferenceNumber = make_ref(w1, w2);
-            msg.add.stockLocate = 0;
-            msg.add.timestamp   = 0;
             msg.add.buySellIndicator = (side_char == 'B') ? 'B' : 'S';
             msg.add.shares = (shares_t)((ap_uint<32>)w5);
             msg.add.price  = (price_t)((ap_uint<32>)w6);

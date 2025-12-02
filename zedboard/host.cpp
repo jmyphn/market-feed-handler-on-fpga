@@ -10,7 +10,6 @@
 
 #include "blackscholes.hpp"
 #include "itch.hpp"
-#include "priority_queue.hpp"
 #include "orderbook.hpp"
 #include "timer.h"
 
@@ -66,6 +65,7 @@ int main(int argc, char **argv) {
           uint32_t word = 0;
           // Copy up to 4 bytes into a 32-bit word
           memcpy(&word, buffer + 2 + i * 4, std::min(4, message_length - i * 4));
+          std::cout << "writing word: " << word << std::endl;
           nbytes = write(fdw, (void*)&word, sizeof(word));
           assert(nbytes == sizeof(word));
       }

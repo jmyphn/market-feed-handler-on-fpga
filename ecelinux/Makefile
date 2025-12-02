@@ -13,7 +13,7 @@ VHLS_INC=$(XILINX_VIVADO)/include
 # Specify compilation flags
 CFLAGS=-g -I${VHLS_INC} -DHLS_NO_XIL_FPO_LIB -std=c++11 -O3
 
-TCL_SCRIPT=run.tcl
+TCL_SCRIPT=run_hft.tcl
 
 .PHONY: all itch_csim bs_csim orderbook_csim bitstream clean
 

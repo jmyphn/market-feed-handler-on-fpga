@@ -4,18 +4,16 @@
 // OrderBook internal data structures
 // ===============================================================
 
+#define OPT
+
 // Index type for arrays (-1 = none)
-typedef ap_int<12> idx_t;
+typedef ap_int<16> idx_t;
 
 struct Order {
     order_ref_t referenceNumber;
-    char        side;     // 'B' / 'S'
     shares_t    shares;
     price_t     price;
-
-    idx_t       prev;
-    idx_t       next;
-
+    char        side;     // 'B' / 'S'
     bool        valid;
 };
 
@@ -23,14 +21,10 @@ struct Order {
 struct Level {
     price_t price;
     shares_t limitVolume;
-
-    idx_t firstOrder;
-    idx_t lastOrder;
-
     bool valid;
 };
 
-#define MAX_ORDERS 768
+#define MAX_ORDERS 256
 #define MAX_LEVELS 128
 #define SIDE_BUY   'B'
 #define SIDE_SELL  'S'
@@ -54,28 +48,28 @@ public:
     #pragma HLS INLINE
         // Initialize orders
         for (int i = 0; i < MAX_ORDERS; i++) {
+        #ifdef OPT
         #pragma HLS PIPELINE II=1
+        #endif
             orders[i].valid = false;
-            orders[i].prev  = -1;
-            orders[i].next  = -1;
         }
 
         // Initialize bid levels
         for (int i = 0; i < MAX_LEVELS; i++) {
+        #ifdef OPT
         #pragma HLS PIPELINE II=1
+        #endif
             bidLevels[i].valid = false;
             bidLevels[i].limitVolume = 0;
-            bidLevels[i].firstOrder = -1;
-            bidLevels[i].lastOrder = -1;
         }
 
         // Initialize ask levels
         for (int i = 0; i < MAX_LEVELS; i++) {
+        #ifdef OPT
         #pragma HLS PIPELINE II=1
+        #endif
             askLevels[i].valid = false;
             askLevels[i].limitVolume = 0;
-            askLevels[i].firstOrder = -1;
-            askLevels[i].lastOrder = -1;
         }
     }
 
@@ -86,7 +80,10 @@ public:
     idx_t find_free_order_slot() {
     #pragma HLS INLINE off
         for (int i = 0; i < MAX_ORDERS; i++) {
-        #pragma HLS PIPELINE II=1
+        // #pragma HLS PIPELINE II=1
+          #ifdef OPT
+          #pragma HLS UNROLL factor=4
+          #endif
             if (!orders[i].valid)
                 return i;
         }
@@ -96,7 +93,7 @@ public:
     idx_t find_order(order_ref_t ref) {
     #pragma HLS INLINE off
         for (int i = 0; i < MAX_ORDERS; i++) {
-        #pragma HLS PIPELINE II=1
+        // #pragma HLS UNROLL factor=4
             if (orders[i].valid && orders[i].referenceNumber == ref)
                 return i;
         }
@@ -112,7 +109,9 @@ public:
     }
 
     idx_t find_level_idx(char side, price_t price) {
+    #ifdef OPT
     #pragma HLS INLINE off
+    #endif
         Level* levels = level_array(side);
         for (int i = 0; i < MAX_LEVELS; i++) {
         #pragma HLS PIPELINE II=1
@@ -123,16 +122,18 @@ public:
     }
 
     idx_t allocate_level(char side, price_t price) {
+    #ifdef OPT
     #pragma HLS INLINE off
+    #endif
         Level* levels = level_array(side);
         for (int i = 0; i < MAX_LEVELS; i++) {
+        #ifdef OPT
         #pragma HLS PIPELINE II=1
+        #endif
             if (!levels[i].valid) {
                 levels[i].valid = true;
                 levels[i].price = price;
                 levels[i].limitVolume = 0;
-                levels[i].firstOrder = -1;
-                levels[i].lastOrder = -1;
                 return i;
             }
         }
@@ -140,19 +141,23 @@ public:
     }
 
     idx_t get_or_create_level(char side, price_t price) {
+    #ifdef OPT
     #pragma HLS INLINE
+    #endif
         idx_t idx = find_level_idx(side, price);
         if (idx != -1) return idx;
         return allocate_level(side, price);
     }
 
     void maybe_delete_level(char side, idx_t lvl_idx) {
+    #ifdef OPT
     #pragma HLS INLINE
+    #endif
         Level* lvls = level_array(side);
         Level& lvl = lvls[lvl_idx];
 
         if (!lvl.valid) return;
-        if (lvl.limitVolume == 0 && lvl.firstOrder == -1 && lvl.lastOrder == -1)
+        if (lvl.limitVolume == 0)
             lvl.valid = false;
     }
 
@@ -161,7 +166,7 @@ public:
     // -----------------------------------------------------------
 
     void add_order(const AddOrderMsg& msg) {
-    #pragma HLS INLINE
+    #pragma HLS INLINE off
         if (find_order(msg.orderReferenceNumber) != -1)
             return;
 
@@ -173,8 +178,6 @@ public:
         o.side  = msg.buySellIndicator;
         o.shares = msg.shares;
         o.price  = msg.price;
-        o.prev = -1;
-        o.next = -1;
         o.valid = true;
 
         char side = o.side;
@@ -184,37 +187,14 @@ public:
         Level* levels = level_array(side);
         Level& lvl = levels[lvl_idx];
 
-        if (lvl.firstOrder == -1) {
-            lvl.firstOrder = slot;
-            lvl.lastOrder = slot;
-        } else {
-            idx_t last = lvl.lastOrder;
-            orders[last].next = slot;
-            o.prev = last;
-            lvl.lastOrder = slot;
-        }
-
         lvl.limitVolume += o.shares;
     }
 
     void remove_order_from_level(idx_t idx, Level& lvl) {
+    #ifdef OPT
     #pragma HLS INLINE
+    #endif
         Order& o = orders[idx];
-
-        if (o.prev != -1)
-            orders[o.prev].next = o.next;
-        else
-            lvl.firstOrder = o.next;
-
-        idx_t p = o.prev;
-        idx_t n = o.next;
-        if (p != -1) orders[p].next = n;
-        else         lvl.firstOrder = n;
-        if (n != -1) orders[n].prev = p;
-        else         lvl.lastOrder  = p;
-
-        o.prev = -1;
-        o.next = -1;
     }
 
     void execute_order(const OrderExecutedMsg& msg) {
@@ -316,12 +296,15 @@ public:
     // -----------------------------------------------------------
 
     price_t getBestBid() const {
-    #pragma HLS INLINE off
+    // #pragma HLS INLINE off
         price_t best = 0;
         const Level* lvls = bidLevels;
 
         for (int i = 0; i < MAX_LEVELS; i++) {
-        #pragma HLS PIPELINE II=2
+        #ifdef OPT
+        // #pragma HLS PIPELINE II=1
+        // #pragma HLS UNROLL factor=4
+        #endif
             if (lvls[i].valid && lvls[i].limitVolume > 0) {
                 if (lvls[i].price > best)
                     best = lvls[i].price;
@@ -331,19 +314,20 @@ public:
     }
 
     price_t getBestAsk() const {
-    #pragma HLS INLINE
-        bool   found = false;
+    #pragma HLS INLINE off
         price_t best = 0;
-
+        bool found = false;
         const Level* lvls = askLevels;
 
         for (int i = 0; i < MAX_LEVELS; i++) {
-        #pragma HLS PIPELINE II=2
+        #ifdef OPT
+        // #pragma HLS PIPELINE II=1
+        #endif
             if (lvls[i].valid && lvls[i].limitVolume > 0) {
-                if (!found || lvls[i].price < best) {
+                if (lvls[i].price < best) {
                     best = lvls[i].price;
-                    found = true;
                 }
+                found = true;
             }
         }
 
@@ -354,7 +338,7 @@ public:
     #pragma HLS INLINE
         ap_uint<16> c = 0;
         for (int i = 0; i < MAX_ORDERS; i++) {
-        #pragma HLS PIPELINE II=1
+        // #pragma HLS PIPELINE II=1
             if (orders[i].valid)
                 c++;
         }

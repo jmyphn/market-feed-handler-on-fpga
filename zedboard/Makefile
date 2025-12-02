@@ -14,7 +14,7 @@ CFLAGS = -I${INC_PATH} -DHLS_NO_XIL_FPO_LIB -O3 -std=c++11
 
 all: sw
 
-hft-arm: hft.cpp itch.cpp orderbook.cpp priority_queue.cpp hash_tbl.cpp blackscholes.cpp
+hft-arm: hft.cpp itch.cpp orderbook.cpp blackscholes.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
 result/hft_arm_result.txt: hft-arm

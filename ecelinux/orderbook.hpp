@@ -21,11 +21,9 @@ enum MsgType {
 // ---------- Message payloads ----------
 struct AddOrderMsg {
     order_ref_t orderReferenceNumber;
-    stock_loc_t stockLocate;
-    timestamp_t timestamp;
-    char        buySellIndicator; // 'B' or 'S'
     shares_t    shares;
     price_t     price;
+    char        buySellIndicator; // 'B' or 'S'
 };
 
 struct OrderExecutedMsg {
@@ -45,7 +43,6 @@ struct OrderDeleteMsg {
 struct OrderReplaceMsg {
     order_ref_t originalOrderReferenceNumber;
     order_ref_t newOrderReferenceNumber;
-    timestamp_t timestamp;
     shares_t    shares;
     price_t     price;
 };
