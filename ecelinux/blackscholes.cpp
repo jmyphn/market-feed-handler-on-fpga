@@ -119,6 +119,8 @@ void black_scholes_price(theta_type S_in, result_type &result) {
 
 void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
   #pragma HLS INLINE off
+  #pragma HLS PIPELINE II=1
+  
   // Read spot price from input stream
   bit32_t in_bits = strm_in.read();
 

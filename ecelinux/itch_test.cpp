@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <endian.h>
 
-static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_U";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_10_per_type";
 
 static const char* type_name(ITCH::MessageType_t t) {
     switch (t) {

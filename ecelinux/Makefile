@@ -30,7 +30,7 @@ result/itch_csim.txt: itch
 itch_csim: result/itch_csim.txt
 	@echo "Result recorded to $<"
 
-orderbook: hash_tbl.cpp priority_queue.cpp orderbook.cpp orderbook_tb.cpp
+orderbook: orderbook.cpp orderbook_tb.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
 result/orderbook_csim.txt: orderbook
@@ -52,7 +52,7 @@ result/bs_csim.txt: bs
 bs_csim: result/bs_csim.txt
 	@echo "Result recorded to $<"
 
-hft: hft_test.cpp hft.cpp itch.cpp orderbook.cpp priority_queue.cpp hash_tbl.cpp blackscholes.cpp
+hft: hft_test.cpp hft.cpp itch.cpp orderbook.cpp blackscholes.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
 result/hft_csim.txt: hft

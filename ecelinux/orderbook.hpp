@@ -1,8 +1,73 @@
-#include "itch.hpp"
-#include <cfloat>
-#include <hls_stream.h>
-#include <ap_int.h>
-#include "typedefs.h"
+#pragma once
+#include "ap_int.h"
+#include "hls_stream.h"
 
-/* Input a stream of orders, output a stream of spot prices. */
-void orderbook(hls::stream<ParsedMessage> &orders, hls::stream<bit32_t> &spot_prices);
+// ---------- Basic types ----------
+typedef ap_uint<64> order_ref_t;
+typedef ap_uint<16> stock_loc_t;
+typedef ap_uint<64> timestamp_t;
+typedef ap_uint<32> price_t;
+typedef ap_uint<32> shares_t;
+
+// ---------- Message types ----------
+enum MsgType {
+    MSG_ADD     = 0,
+    MSG_EXEC    = 1,
+    MSG_CANCEL  = 2,
+    MSG_DELETE  = 3,
+    MSG_REPLACE = 4
+};
+
+
+// ---------- Message payloads ----------
+struct AddOrderMsg {
+    order_ref_t orderReferenceNumber;
+    stock_loc_t stockLocate;
+    timestamp_t timestamp;
+    char        buySellIndicator;
+    shares_t    shares;
+    price_t     price;
+};
+
+struct OrderExecutedMsg {
+    order_ref_t orderReferenceNumber;
+    shares_t    executedShares;
+};
+
+struct OrderCancelMsg {
+    order_ref_t orderReferenceNumber;
+    shares_t    cancelledShares;
+};
+
+struct OrderDeleteMsg {
+    order_ref_t orderReferenceNumber;
+};
+
+struct OrderReplaceMsg {
+    order_ref_t originalOrderReferenceNumber;
+    order_ref_t newOrderReferenceNumber;
+    timestamp_t timestamp;
+    shares_t    shares;
+    price_t     price;
+};
+
+// ---------- Unified input packet ----------
+struct OBInput {
+    MsgType type;
+    AddOrderMsg      add;
+    OrderExecutedMsg exec;
+    OrderCancelMsg   cancel;
+    OrderDeleteMsg   del;
+    OrderReplaceMsg  repl;
+};
+
+// ---------- Output packet ----------
+struct OBOutput {
+    price_t bestBid;
+    price_t bestAsk;
+    ap_uint<16> orderCount;
+};
+
+// ---------- Declare top function ----------
+void orderbook_dut(hls::stream<OBInput>& in,
+                   hls::stream<OBOutput>& out);

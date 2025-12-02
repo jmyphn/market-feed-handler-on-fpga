@@ -1,173 +1,400 @@
-#include <iostream>
-
-#include "hash_tbl.hpp"
-#include "itch_common.hpp"
 #include "orderbook.hpp"
-#include "priority_queue.hpp"
-#include "typedefs.h"
 
-#define ASSERT true
-#if ASSERT
-#include <cassert>
-#endif
+// ===============================================================
+// OrderBook internal data structures
+// ===============================================================
 
-/*
- * If pq is full, drop last element (not max).
- */
-void keep_slim(priority_queue &pq, hash_tbl tbl) {
-#pragma HLS INLINE
-    if (pq.size == CAPACITY) {
-        --pq.size;
+// Index type for arrays (-1 = none)
+typedef ap_int<16> idx_t;
 
-#ifndef __SYNTHESIS__
-        std::cerr << "Keeping slim\n";
-#endif
+struct Order {
+    order_ref_t referenceNumber;
+    stock_loc_t stockLocate;
+    timestamp_t timestamp;
+    char        side;      // 'B' or 'S'
+    shares_t    shares;
+    price_t     price;
 
-        ParsedMessage &order = pq.heap[pq.size];
-        int idx = hash_tbl_lookup(tbl, order.order_id);
+    idx_t       prev;
+    idx_t       next;
 
-#if ASSERT
-        assert(idx != -1);
-#endif
+    bool        valid;
+};
 
-        hash_entry &entry = tbl[idx];
-        entry.value = 0;
-        entry.state = TOMBSTONE;
+struct Level {
+    price_t price;
+    shares_t limitVolume;
+
+    idx_t firstOrder;
+    idx_t lastOrder;
+
+    bool valid;
+};
+
+#define MAX_ORDERS 1024
+#define MAX_LEVELS 256
+#define SIDE_BUY   'B'
+#define SIDE_SELL  'S'
+
+// ===============================================================
+// OrderBook Class
+// ===============================================================
+
+class OrderBook {
+public:
+    Order orders[MAX_ORDERS];
+    Level bidLevels[MAX_LEVELS];
+    Level askLevels[MAX_LEVELS];
+
+    OrderBook() {
+    #pragma HLS INLINE
+        init();
     }
-}
 
-/*
- * Fixed-bound BALANCE loop.
- *
- * Removes up to CAPACITY heads, but exits early.
- */
-void balance(priority_queue &pq, hash_tbl tbl) {
-#pragma HLS INLINE off
+    void init() {
+    #pragma HLS INLINE
+        // Initialize orders
+        for (int i = 0; i < MAX_ORDERS; i++) {
+        #pragma HLS UNROLL factor=2
+            orders[i].valid = false;
+            orders[i].prev  = -1;
+            orders[i].next  = -1;
+        }
 
-BALANCE_LOOP:
-    for (int i = 0; i < CAPACITY; i++) {
-// #pragma HLS PIPELINE II=1
-        #pragma HLS UNROLL factor=16
+        // Initialize bid levels
+        for (int i = 0; i < MAX_LEVELS; i++) {
+        #pragma HLS UNROLL factor=2
+            bidLevels[i].valid = false;
+            bidLevels[i].limitVolume = 0;
+            bidLevels[i].firstOrder = -1;
+            bidLevels[i].lastOrder = -1;
+        }
 
-        if (pq.size == 0) break;
-
-        ParsedMessage top_order = pq_top(pq);
-        int idx = hash_tbl_lookup(tbl, top_order.order_id);
-
-#if ASSERT
-        assert(idx != -1);
-#endif
-
-        hash_entry &top_entry = tbl[idx];
-
-        if (top_entry.value > 0)
-            break;
-
-        top_entry.value = 0;
-        top_entry.state = TOMBSTONE;
-
-        pq_pop(pq);
+        // Initialize ask levels
+        for (int i = 0; i < MAX_LEVELS; i++) {
+        #pragma HLS UNROLL factor=2
+            askLevels[i].valid = false;
+            askLevels[i].limitVolume = 0;
+            askLevels[i].firstOrder = -1;
+            askLevels[i].lastOrder = -1;
+        }
     }
-}
 
-/*
- * Remove shares from entry
- */
-void remove_shares(hash_tbl tbl, key_type order_id, val_type &shares) {
-#pragma HLS INLINE
-    int idx = hash_tbl_lookup(tbl, order_id);
-    if (idx != -1) {
-        hash_entry &curr_entry = tbl[idx];
-        if (curr_entry.value > shares)
-            curr_entry.value -= shares;
+    // -----------------------------------------------------------
+    // Helper functions
+    // -----------------------------------------------------------
+
+    idx_t find_free_order_slot() {
+    #pragma HLS INLINE
+        for (int i = 0; i < MAX_ORDERS; i++) {
+        #pragma HLS PIPELINE II=1
+            if (!orders[i].valid)
+                return i;
+        }
+        return -1;
+    }
+
+    idx_t find_order(order_ref_t ref) {
+    #pragma HLS INLINE
+        for (int i = 0; i < MAX_ORDERS; i++) {
+        #pragma HLS PIPELINE II=1
+            if (orders[i].valid && orders[i].referenceNumber == ref)
+                return i;
+        }
+        return -1;
+    }
+
+    Level* level_array(char side) {
+        return (side == SIDE_BUY) ? bidLevels : askLevels;
+    }
+
+    const Level* level_array_const(char side) const {
+        return (side == SIDE_BUY) ? bidLevels : askLevels;
+    }
+
+    idx_t find_level_idx(char side, price_t price) {
+    #pragma HLS INLINE
+        Level* levels = level_array(side);
+        for (int i = 0; i < MAX_LEVELS; i++) {
+        #pragma HLS PIPELINE II=1
+            if (levels[i].valid && levels[i].price == price)
+                return i;
+        }
+        return -1;
+    }
+
+    idx_t allocate_level(char side, price_t price) {
+    #pragma HLS INLINE
+        Level* levels = level_array(side);
+        for (int i = 0; i < MAX_LEVELS; i++) {
+        #pragma HLS PIPELINE II=1
+            if (!levels[i].valid) {
+                levels[i].valid = true;
+                levels[i].price = price;
+                levels[i].limitVolume = 0;
+                levels[i].firstOrder = -1;
+                levels[i].lastOrder = -1;
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    idx_t get_or_create_level(char side, price_t price) {
+    #pragma HLS INLINE
+        idx_t idx = find_level_idx(side, price);
+        if (idx != -1) return idx;
+        return allocate_level(side, price);
+    }
+
+    void maybe_delete_level(char side, idx_t lvl_idx) {
+    #pragma HLS INLINE
+        Level* lvls = level_array(side);
+        Level& lvl = lvls[lvl_idx];
+
+        if (!lvl.valid) return;
+        if (lvl.limitVolume == 0 && lvl.firstOrder == -1 && lvl.lastOrder == -1)
+            lvl.valid = false;
+    }
+
+    // -----------------------------------------------------------
+    // Core order operations
+    // -----------------------------------------------------------
+
+    void add_order(const AddOrderMsg& msg) {
+    #pragma HLS INLINE
+        if (find_order(msg.orderReferenceNumber) != -1)
+            return;
+
+        idx_t slot = find_free_order_slot();
+        if (slot == -1) return;
+
+        Order& o = orders[slot];
+        o.referenceNumber = msg.orderReferenceNumber;
+        o.stockLocate = msg.stockLocate;
+        o.timestamp = msg.timestamp;
+        o.side = msg.buySellIndicator;
+        o.shares = msg.shares;
+        o.price  = msg.price;
+        o.prev = -1;
+        o.next = -1;
+        o.valid = true;
+
+        char side = o.side;
+        idx_t lvl_idx = get_or_create_level(side, o.price);
+        if (lvl_idx == -1) { o.valid = false; return; }
+
+        Level* levels = level_array(side);
+        Level& lvl = levels[lvl_idx];
+
+        if (lvl.firstOrder == -1) {
+            lvl.firstOrder = slot;
+            lvl.lastOrder = slot;
+        } else {
+            idx_t last = lvl.lastOrder;
+            orders[last].next = slot;
+            o.prev = last;
+            lvl.lastOrder = slot;
+        }
+
+        lvl.limitVolume += o.shares;
+    }
+
+    void remove_order_from_level(idx_t idx, Level& lvl) {
+    #pragma HLS INLINE
+        Order& o = orders[idx];
+
+        if (o.prev != -1)
+            orders[o.prev].next = o.next;
         else
-            curr_entry.value = 0;
+            lvl.firstOrder = o.next;
+
+        if (o.next != -1)
+            orders[o.next].prev = o.prev;
+        else
+            lvl.lastOrder = o.prev;
+
+        o.prev = -1;
+        o.next = -1;
     }
-}
 
-/*
- * Remove all shares for an entry
- */
-void remove_all_shares(hash_tbl tbl, key_type order_id) {
-#pragma HLS INLINE
-    int idx = hash_tbl_lookup(tbl, order_id);
-    if (idx != -1) {
-        hash_entry &curr_entry = tbl[idx];
-        curr_entry.value = 0;
-    }
-}
+    void execute_order(const OrderExecutedMsg& msg) {
+    #pragma HLS INLINE
+        idx_t idx = find_order(msg.orderReferenceNumber);
+        if (idx == -1) return;
 
-/*
- * Fully deterministic orderbook with fixed-bound loops.
- */
-void orderbook(hls::stream<ParsedMessage> &orders,
-               hls::stream<bit32_t> &spot_prices) {
+        Order& o = orders[idx];
+        char side = o.side;
 
-#pragma HLS INLINE off
+        idx_t lvl_idx = find_level_idx(side, o.price);
+        if (lvl_idx == -1) return;
 
-    static priority_queue bid_pq;
-    static priority_queue ask_pq;
-    static hash_tbl shares_per_order;
+        Level* levels = level_array(side);
+        Level& lvl = levels[lvl_idx];
 
-    ParsedMessage order = orders.read();
+        shares_t exec = msg.executedShares;
+        if (exec > o.shares) exec = o.shares;
 
-    switch (order.type) {
+        o.shares -= exec;
+        lvl.limitVolume -= exec;
 
-    case ITCH::AddOrderMessageType:
-        if (order.side == 'b') {
-            keep_slim(bid_pq, shares_per_order);
-            pq_push(bid_pq, order);
-        } else {
-            keep_slim(ask_pq, shares_per_order);
-            pq_push(ask_pq, order);
+        if (o.shares == 0) {
+            remove_order_from_level(idx, lvl);
+            o.valid = false;
+            maybe_delete_level(side, lvl_idx);
         }
-        hash_tbl_put(shares_per_order, order.order_id, order.shares);
-        break;
-
-    case ITCH::OrderExecutedMessageType:
-    case ITCH::OrderExecutedWithPriceMessageType:
-    case ITCH::OrderCancelMessageType:
-        remove_shares(shares_per_order, order.order_id, order.shares);
-        balance(bid_pq, shares_per_order);
-        balance(ask_pq, shares_per_order);
-        break;
-
-    case ITCH::OrderDeleteMessageType:
-        remove_all_shares(shares_per_order, order.order_id);
-        balance(bid_pq, shares_per_order);
-        balance(ask_pq, shares_per_order);
-        break;
-
-    case ITCH::OrderReplaceMessageType:
-        remove_all_shares(shares_per_order, order.order_id);
-        balance(bid_pq, shares_per_order);
-        balance(ask_pq, shares_per_order);
-
-        if (order.side == 'b') {
-            keep_slim(bid_pq, shares_per_order);
-            pq_push(bid_pq, order);
-        } else {
-            keep_slim(ask_pq, shares_per_order);
-            pq_push(ask_pq, order);
-        }
-        hash_tbl_put(shares_per_order, order.order_id, order.shares);
-        break;
-
-    default:
-        break;
     }
 
-    // Compute spot price
-    bit32_t spot_price;
+    void cancel_order(const OrderCancelMsg& msg) {
+    #pragma HLS INLINE
+        idx_t idx = find_order(msg.orderReferenceNumber);
+        if (idx == -1) return;
 
-    if (bid_pq.size == 0 && ask_pq.size == 0)
-        spot_price = 6767;
-    else if (bid_pq.size == 0)
-        spot_price = pq_top(ask_pq).price;
-    else if (ask_pq.size == 0)
-        spot_price = pq_top(bid_pq).price;
-    else
-        spot_price = (pq_top(ask_pq).price + pq_top(bid_pq).price) << 1;
+        Order& o = orders[idx];
+        char side = o.side;
+        idx_t lvl_idx = find_level_idx(side, o.price);
+        if (lvl_idx == -1) return;
 
-    spot_prices.write(spot_price);
+        Level* lvls = level_array(side);
+        Level& lvl = lvls[lvl_idx];
+
+        shares_t canc = msg.cancelledShares;
+        if (canc >= o.shares) canc = o.shares - 1;
+
+        o.shares -= canc;
+        lvl.limitVolume -= canc;
+    }
+
+    void delete_order(const OrderDeleteMsg& msg) {
+    #pragma HLS INLINE
+        idx_t idx = find_order(msg.orderReferenceNumber);
+        if (idx == -1) return;
+
+        Order& o = orders[idx];
+        char side = o.side;
+
+        idx_t lvl_idx = find_level_idx(side, o.price);
+        if (lvl_idx != -1) {
+            Level* lvls = level_array(side);
+            Level& lvl = lvls[lvl_idx];
+            lvl.limitVolume -= o.shares;
+            remove_order_from_level(idx, lvl);
+            maybe_delete_level(side, lvl_idx);
+        }
+
+        o.valid = false;
+    }
+
+    void replace_order(const OrderReplaceMsg& msg) {
+    #pragma HLS INLINE
+        idx_t old = find_order(msg.originalOrderReferenceNumber);
+        if (old == -1) return;
+
+        Order& o = orders[old];
+        char side = o.side;
+
+        idx_t lvl_idx = find_level_idx(side, o.price);
+        if (lvl_idx != -1) {
+            Level* lvls = level_array(side);
+            Level& lvl = lvls[lvl_idx];
+            lvl.limitVolume -= o.shares;
+            remove_order_from_level(old, lvl);
+            maybe_delete_level(side, lvl_idx);
+        }
+
+        o.valid = false;
+
+        AddOrderMsg newMsg;
+        newMsg.orderReferenceNumber = msg.newOrderReferenceNumber;
+        newMsg.stockLocate = o.stockLocate;
+        newMsg.timestamp = msg.timestamp;
+        newMsg.buySellIndicator = side;
+        newMsg.shares = msg.shares;
+        newMsg.price = msg.price;
+
+        add_order(newMsg);
+    }
+
+    // -----------------------------------------------------------
+    // Queries
+    // -----------------------------------------------------------
+
+    price_t getBestBid() const {
+    #pragma HLS INLINE
+        price_t best = 0;
+        const Level* lvls = bidLevels;
+
+        for (int i = 0; i < MAX_LEVELS; i++) {
+        #pragma HLS PIPELINE II=1
+            if (lvls[i].valid && lvls[i].limitVolume > 0) {
+                if (lvls[i].price > best)
+                    best = lvls[i].price;
+            }
+        }
+        return best;
+    }
+
+    price_t getBestAsk() const {
+    #pragma HLS INLINE
+        bool found = false;
+        price_t best = 0;
+
+        const Level* lvls = askLevels;
+
+        for (int i = 0; i < MAX_LEVELS; i++) {
+        #pragma HLS PIPELINE II=1
+            if (lvls[i].valid && lvls[i].limitVolume > 0) {
+                if (!found || lvls[i].price < best) {
+                    best = lvls[i].price;
+                    found = true;
+                }
+            }
+        }
+
+        return found ? best : price_t(0);
+    }
+
+    ap_uint<16> countOrders() const {
+    #pragma HLS INLINE
+        ap_uint<16> c = 0;
+        for (int i = 0; i < MAX_ORDERS; i++) {
+        #pragma HLS PIPELINE II=1
+            if (orders[i].valid)
+                c++;
+        }
+        return c;
+    }
+};
+
+// ===============================================================
+// TOP LEVEL FUNCTION
+// ===============================================================
+void orderbook_dut(hls::stream<OBInput>& in,
+                   hls::stream<OBOutput>& out) {
+#pragma HLS INTERFACE axis port=in
+#pragma HLS INTERFACE axis port=out
+#pragma HLS INTERFACE ap_ctrl_none port=return
+
+    static OrderBook ob;
+#pragma HLS RESET variable=ob
+
+    if (!in.empty()) {
+        OBInput msg = in.read();
+
+    switch ((MsgType)msg.type) {
+        case MSG_ADD:     ob.add_order(msg.add);     break;
+        case MSG_EXEC:    ob.execute_order(msg.exec);break;
+        case MSG_CANCEL:  ob.cancel_order(msg.cancel);break;
+        case MSG_DELETE:  ob.delete_order(msg.del);  break;
+        case MSG_REPLACE: ob.replace_order(msg.repl);break;
+    }
+
+
+        OBOutput o;
+        o.bestBid = ob.getBestBid();
+        o.bestAsk = ob.getBestAsk();
+        o.orderCount = ob.countOrders();
+
+        out.write(o);
+    }
 }

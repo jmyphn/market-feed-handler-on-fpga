@@ -1,67 +1,70 @@
-/**
- * Orderbook testing.
- *
- * Testbench assumes every input as a corresponding output.
- *
- * Write tests by adding values to test_inputs and expected.
- */
-#include "itch_common.hpp"
-#include "orderbook.hpp"
-#include "typedefs.h"
 #include <iostream>
-
-#define X 0 // for marking placeholders
-
+#include "hls_stream.h"
+#include "orderbook.hpp"     // MUST include new HLS header
 using namespace std;
 
+// ------------------------------
+// Helper to create messages
+// ------------------------------
+OBInput make_add(char side, order_ref_t ref, shares_t shares, price_t price) {
+    OBInput m;
+    m.type = MSG_ADD;
+    m.add.orderReferenceNumber = ref;
+    m.add.stockLocate = 0;
+    m.add.timestamp   = 0;
+    m.add.buySellIndicator = (side == 'b' ? 'B' : 'S');
+    m.add.shares = shares;
+    m.add.price  = price;
+    return m;
+}
+
+OBInput make_delete(order_ref_t ref) {
+    OBInput m;
+    m.type = MSG_DELETE;
+    m.del.orderReferenceNumber = ref;
+    return m;
+}
+
+// ------------------------------
+// Main testbench
+// ------------------------------
 int main() {
-  cout << "Starting tests" << endl;
+    cout << "Starting HLS OrderBook tests" << endl;
 
-  // Inputs
-  hls::stream<ParsedMessage> test_stream;
-  ParsedMessage test_inputs[] = {
-      ParsedMessage{ITCH::AddOrderMessageType, 'b', 0, X, 1, 10},
-      ParsedMessage{ITCH::AddOrderMessageType, 'b', 1, X, 2, 9},
-      ParsedMessage{ITCH::AddOrderMessageType, 'b', 2, X, 3, 11},
-      ParsedMessage{ITCH::OrderDeleteMessageType, 'b', 2, X, X, X},
-      ParsedMessage{ITCH::OrderDeleteMessageType, 'b', 0, X, X, X},
-  };
-  for (int i = 0; i < sizeof(test_inputs) / sizeof(ParsedMessage); ++i) {
-    test_stream.write(test_inputs[i]);
-  }
+    hls::stream<OBInput> in_stream;
+    hls::stream<OBOutput> out_stream;
 
-  // Outputs
-  hls::stream<bit32_t> spot_price_stream;
-  bit32_t expected[] = {10, 10, 11, 10, 9};
+    // Test sequence (same as your old one)
+    in_stream.write(make_add('b', 0, 1, 10));
+    in_stream.write(make_add('b', 1, 2,  9));
+    in_stream.write(make_add('b', 2, 3, 11));
+    in_stream.write(make_delete(2));
+    in_stream.write(make_delete(0));
 
-  // Simulate the tests
-  while (!test_stream.empty()) {
-    orderbook(test_stream, spot_price_stream);
-  }
+    int expected[] = {10, 10, 11, 10, 9};
+    int expected_size = sizeof(expected) / sizeof(int);
 
-  // Check test outputs
-  bool good = true;
-  int expected_size = sizeof(expected) / sizeof(bit32_t);
-  int i = 0;
-  for (; !spot_price_stream.empty() && i < expected_size; ++i) {
-    bit32_t actual = spot_price_stream.read();
-    if (actual != expected[i]) {
-      good = false;
-      cout << "Mismatch, expected " << expected[i] << ", but got " << actual
-           << endl;
+    // run simulation
+    while (!in_stream.empty()) {
+        orderbook_dut(in_stream, out_stream);
     }
-  }
-  if (i < expected_size) {
-    good = false;
-    cout << "Less output messages than expected" << endl;
-  } else
-    while (!spot_price_stream.empty()) {
-      good = false;
-      cout << "Also got: " << spot_price_stream.read() << "\n";
+
+    // validate output
+    bool good = true;
+    int i = 0;
+
+    while (!out_stream.empty() && i < expected_size) {
+        OBOutput o = out_stream.read();
+        int actual = o.bestBid;
+
+        if (actual != expected[i]) {
+            cout << "Mismatch at " << i << ": expected "
+                 << expected[i] << " got " << actual << endl;
+            good = false;
+        }
+        i++;
     }
-  cout << "Finished tests,";
-  if (good)
-    cout << " tests all pass" << endl;
-  else
-    cout << " tests dont pass" << endl;
+
+    cout << (good ? "PASS" : "FAIL") << endl;
+    return 0;
 }

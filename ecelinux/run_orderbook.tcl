@@ -4,17 +4,15 @@
 # @brief: A Tcl script for synthesizing the orderbook design.
 
 # Project name
-set hls_prj hft.prj
+set hls_prj orderbook.prj
 
 # Open/reset the project
-open_project ${hls_prj} -reset
+open_project ${orderbook_prj} -reset
 
 # Top function of the design is "orderbook"
-set_top orderbook
+set_top orderbook_dut
 
 # Add design and testbench files
-add_files priority_queue.cpp -cflags "-std=c++11"
-add_files hash_tbl.cpp -cflags "-std=c++11"
 add_files orderbook.cpp -cflags "-std=c++11"
 add_files -tb orderbook_tb.cpp -cflags "-std=c++11"
 
@@ -26,11 +24,6 @@ set_part {xc7z020clg484-1}
 create_clock -period 10
 
 ### You can insert your own directives here ###
-
-
-
-
-
 
 ############################################
 
