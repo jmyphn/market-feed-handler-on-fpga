@@ -136,6 +136,8 @@ public:
   }
 
   long long getTotalBytesRead() const { return totalBytesRead; }
+  
+  bool isOpen() const { return fdItch != -1; }
 
 private:
   int         fdItch;
@@ -206,6 +208,10 @@ inline Timestamp_t getDataTimestamp(const char* data) {
 
 inline Timestamp_t strToTimestamp(const char* s) {
   return strtoull(s, nullptr, 10);
+}
+
+inline uint16_t getMessageLength(const char* data) {
+  return be16toh(*(const uint16_t*)data);
 }
 
 } // namespace Parser

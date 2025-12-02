@@ -20,30 +20,16 @@ static order_ref_t make_ref(bit32_t hi, bit32_t lo) {
     return r;
 }
 
-void dut(
-    hls::stream<bit32_t> &strm_in,    // raw ITCH 32-bit words
-    hls::stream<bs_out_t> &strm_out   // packed BS output
+// ============================================================================
+// STAGE 2: ITCH Message Handler
+// Parses ITCH words and constructs orderbook messages
+// ============================================================================
+void itch_msg_handler(
+    hls::stream<bit32_t> &itch_parsed,
+    hls::stream<OBInput> &ob_in
 ) {
-#pragma HLS DATAFLOW
-
-    // Internal streams
-    static hls::stream<bit32_t> itch_parsed("itch_parsed");
-    static hls::stream<OBInput> ob_in("ob_in");
-    static hls::stream<OBOutput> ob_out("ob_out");
-
-    static hls::stream<bit32_t> bs_in("bs_in");
-    static hls::stream<bit32_t> bs_hw_out("bs_hw_out");
-
-#pragma HLS STREAM variable=itch_parsed depth=32
-#pragma HLS STREAM variable=ob_in       depth=32
-#pragma HLS STREAM variable=ob_out      depth=32
-#pragma HLS STREAM variable=bs_in       depth=4
-#pragma HLS STREAM variable=bs_hw_out   depth=4
-
-    // ----------------------------------------------------------
-    // Stage 1: ITCH Parser
-    // ----------------------------------------------------------
-    itch_dut(strm_in, itch_parsed);
+#pragma HLS PIPELINE II=1
+#pragma HLS INLINE off
 
     if (!itch_parsed.empty()) {
         bit32_t w0 = itch_parsed.read();
@@ -58,12 +44,10 @@ void dut(
         char side_char     = (char)w0(15,8);
 
         OBInput msg;
-        msg.type = 0; // default
-
+        msg.type = 0;
         bool valid = true;
 
         if (msg_type_char == 'A') {
-            // Add order
             msg.type = MSG_ADD;
             msg.add.orderReferenceNumber = make_ref(w1, w2);
             msg.add.stockLocate = 0;
@@ -72,19 +56,16 @@ void dut(
             msg.add.shares = (shares_t)((ap_uint<32>)w5);
             msg.add.price  = (price_t)((ap_uint<32>)w6);
         } else if (msg_type_char == 'D') {
-            // Delete order
             msg.type = MSG_DELETE;
             msg.del.orderReferenceNumber = make_ref(w1, w2);
         } else if (msg_type_char == 'E') {
-            // Execute order
             msg.type = MSG_EXEC;
             msg.exec.orderReferenceNumber = make_ref(w1, w2);
-            msg.exec.executedShares       = (shares_t)((ap_uint<32>)w5);
+            msg.exec.executedShares = (shares_t)((ap_uint<32>)w5);
         } else if (msg_type_char == 'X') {
-            // Cancel (partial cancel)
             msg.type = MSG_CANCEL;
             msg.cancel.orderReferenceNumber = make_ref(w1, w2);
-            msg.cancel.cancelledShares      = (shares_t)((ap_uint<32>)w5);
+            msg.cancel.cancelledShares = (shares_t)((ap_uint<32>)w5);
         } else {
             valid = false;
         }
@@ -93,8 +74,7 @@ void dut(
         if (valid) {
             std::cout << "[ITCH] type=" << msg_type_char
                       << " side=" << side_char
-                      << " price_raw=" << (unsigned)w6
-                      << " ";
+                      << " price_raw=" << (unsigned)w6 << " ";
         }
 #endif
 
@@ -102,59 +82,61 @@ void dut(
             ob_in.write(msg);
         }
     }
+}
 
-    // ----------------------------------------------------------
-    // Stage 2: Orderbook
-    // ----------------------------------------------------------
-    if (!ob_in.empty()) {
-        orderbook_dut(ob_in, ob_out);
-    }
+// ============================================================================
+// STAGE 4: Black-Scholes Preprocessor
+// Calculates mid-price and converts to float
+// ============================================================================
+void bs_preprocessor(
+    hls::stream<OBOutput> &ob_out,
+    hls::stream<bit32_t> &bs_in
+) {
+#pragma HLS PIPELINE II=1
+#pragma HLS INLINE off
 
-    // ----------------------------------------------------------
-    // Stage 3: Black–Scholes
-    // ----------------------------------------------------------
     if (!ob_out.empty()) {
         OBOutput ob = ob_out.read();
 
-        // Use best bid as the spot price (in price_t units)
-        // Compute mid-price = average(bestBid, bestAsk)
         price_t bid = ob.bestBid;
         price_t ask = ob.bestAsk;
-
-        // If either side missing, fall back gracefully
         price_t mid_int;
 
         if (bid == 0 && ask == 0) {
             mid_int = 0;
-        } 
-        else if (bid == 0) {
+        } else if (bid == 0) {
             mid_int = ask;
-        }
-        else if (ask == 0) {
+        } else if (ask == 0) {
             mid_int = bid;
-        }
-        else {
-            mid_int = (bid + ask) >> 1;    // divide by 2 using hardware shift
+        } else {
+            mid_int = (bid + ask) >> 1;
         }
 
-        // Convert ticks → float dollars
         float spot_price = ((float)mid_int) / 10000.0f;
-
 
 #ifndef __SYNTHESIS__
         std::cout << "Spot=" << std::fixed << std::setprecision(4)
                   << spot_price << " ";
 #endif
 
-        // Convert spot float → raw bits
         union { float f; uint32_t u; } conv;
         conv.f = spot_price;
         bs_in.write((bit32_t)conv.u);
+    }
+}
 
-        // Run BS accelerator
-        bs_dut(bs_in, bs_hw_out);
+// ============================================================================
+// STAGE 6: Black-Scholes Postprocessor
+// Packs call and put results into single 64-bit output
+// ============================================================================
+void bs_postprocessor(
+    hls::stream<bit32_t> &bs_hw_out,
+    hls::stream<bs_out_t> &strm_out
+) {
+#pragma HLS PIPELINE II=1
+#pragma HLS INLINE off
 
-        // Read call/put outputs
+    if (!bs_hw_out.empty()) {
         bit32_t call_bits = bs_hw_out.read();
         bit32_t put_bits  = bs_hw_out.read();
 
@@ -164,4 +146,35 @@ void dut(
 
         strm_out.write(out64);
     }
+}
+
+// ============================================================================
+// TOP-LEVEL DUT - CANONICAL DATAFLOW
+// ============================================================================
+void dut(
+    hls::stream<bit32_t> &strm_in,
+    hls::stream<bs_out_t> &strm_out
+) {
+#pragma HLS DATAFLOW
+
+    // Internal streams connecting pipeline stages
+    static hls::stream<bit32_t> itch_parsed("itch_parsed");
+    static hls::stream<OBInput> ob_in("ob_in");
+    static hls::stream<OBOutput> ob_out("ob_out");
+    static hls::stream<bit32_t> bs_in("bs_in");
+    static hls::stream<bit32_t> bs_hw_out("bs_hw_out");
+
+#pragma HLS STREAM variable=itch_parsed depth=32
+#pragma HLS STREAM variable=ob_in       depth=32
+#pragma HLS STREAM variable=ob_out      depth=32
+#pragma HLS STREAM variable=bs_in       depth=4
+#pragma HLS STREAM variable=bs_hw_out   depth=4
+
+    // Six-stage pipeline (each function runs concurrently)
+    itch_dut(strm_in, itch_parsed);           // Stage 1: ITCH parser
+    itch_msg_handler(itch_parsed, ob_in);     // Stage 2: ITCH message handler
+    orderbook_dut(ob_in, ob_out);             // Stage 3: Order book
+    bs_preprocessor(ob_out, bs_in);           // Stage 4: BS preprocessor
+    bs_dut(bs_in, bs_hw_out);                 // Stage 5: Black-Scholes engine
+    bs_postprocessor(bs_hw_out, strm_out);    // Stage 6: BS postprocessor
 }

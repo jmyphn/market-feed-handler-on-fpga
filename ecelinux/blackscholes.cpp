@@ -75,32 +75,34 @@ void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
   #pragma HLS INLINE off
   #pragma HLS PIPELINE II=1
   
-  // Read spot price from input stream
-  bit32_t in_bits = strm_in.read();
+  if (!strm_in.empty()) {
+    // Read spot price from input stream
+    bit32_t in_bits = strm_in.read();
 
-  union {
-    float fval;
-    int   ival;
-  } u_in;
+    union {
+      float fval;
+      int   ival;
+    } u_in;
 
-  u_in.ival = static_cast<int>(in_bits);
-  theta_type S_in = u_in.fval;
+    u_in.ival = static_cast<int>(in_bits);
+    theta_type S_in = u_in.fval;
 
-  // Compute Black–Scholes price
-  result_type result;
-  black_scholes_price(S_in, result);
+    // Compute Black–Scholes price
+    result_type result;
+    black_scholes_price(S_in, result);
 
-  // Convert results back to 32-bit words
-  union { float fval; int ival; } ucall;
-  union { float fval; int ival; } uput;
+    // Convert results back to 32-bit words
+    union { float fval; int ival; } ucall;
+    union { float fval; int ival; } uput;
 
-  ucall.fval = result.call;
-  uput.fval  = result.put;
+    ucall.fval = result.call;
+    uput.fval  = result.put;
 
-  bit32_t icall = static_cast<bit32_t>(ucall.ival);
-  bit32_t iput  = static_cast<bit32_t>(uput.ival);
+    bit32_t icall = static_cast<bit32_t>(ucall.ival);
+    bit32_t iput  = static_cast<bit32_t>(uput.ival);
 
-  // Write output to stream (call, put)
-  strm_out.write(icall);
-  strm_out.write(iput);
+    // Write output to stream (call, put)
+    strm_out.write(icall);
+    strm_out.write(iput);
+  }
 }

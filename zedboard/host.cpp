@@ -72,21 +72,31 @@ int main(int argc, char **argv) {
       messages_sent++;
   }
 
-  std::cout << "All messages sent. Waiting for results from FPGA..." << std::endl;
+  std::cout << "All messages sent (" << messages_sent << " total). Waiting for results from FPGA..." << std::endl;
 
-  // Continuously read results from the FPGA
-  // The FPGA will send back Black-Scholes option prices when they are calculated.
-  // This loop will block until data is available.
-  float option_price;
+  // Read results from the FPGA
+  // Expect one 64-bit result (call + put prices) per message sent
+  uint64_t result_data;
   int results_received = 0;
-  while (true) {
-      nbytes = read(fdr, (void*)&option_price, sizeof(option_price));
+  
+  for (int i = 0; i < messages_sent; i++) {
+    std::cout << "Receiving result " << (i+1) << " of " << messages_sent << "..." << std::endl;
+      nbytes = read(fdr, (void*)&result_data, sizeof(result_data));
       if (nbytes <= 0) {
-          // No more data or an error occurred
+          std::cerr << "Error: Expected " << messages_sent << " results but only received " << results_received << std::endl;
           break;
       }
-      assert(nbytes == sizeof(option_price));
-      std::cout << "Received Black-Scholes option price: " << option_price << std::endl;
+      assert(nbytes == sizeof(result_data));
+      
+      // Extract call and put prices from the 64-bit result
+      uint32_t call_bits = result_data & 0xFFFFFFFF;
+      uint32_t put_bits = (result_data >> 32) & 0xFFFFFFFF;
+      
+      float call_price, put_price;
+      memcpy(&call_price, &call_bits, sizeof(float));
+      memcpy(&put_price, &put_bits, sizeof(float));
+      
+      std::cout << "Message " << (i+1) << ": Call=" << call_price << ", Put=" << put_price << std::endl;
       results_received++;
   }
 

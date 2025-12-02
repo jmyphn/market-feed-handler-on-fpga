@@ -8,7 +8,7 @@
 #        3. "make clean" cleans up the directory
 
 INC_PATH=/usr/include/vivado_hls
-CFLAGS = -I${INC_PATH} -DHLS_NO_XIL_FPO_LIB -O3
+CFLAGS = -I${INC_PATH} -DHLS_NO_XIL_FPO_LIB -O3 -std=c++11
 
 .PHONY: all sw fpga
 
