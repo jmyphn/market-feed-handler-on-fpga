@@ -1,10 +1,6 @@
 #include <iostream>
-#include <cmath>
 #include "blackscholes.hpp"
-
-#ifdef USE_HLS_MATH
 #include "hls_math.h"
-#endif
 
 theta_type K = 100.0f; // Strike price
 theta_type r = 0.05f;  // Risk-free rate 
@@ -26,11 +22,7 @@ static theta_type normal_cdf(theta_type x) {
 
     theta_type exponent = -0.5f * L * L;
 
-#ifdef USE_HLS_MATH
-    theta_type pdf = theta_type(0.3989422804014327f) * hls::exp(exponent);;
-#else
-    theta_type pdf = theta_type(0.3989422804014327f) * exp(exponent);;
-#endif
+    theta_type pdf = theta_type(0.3989422804014327f) * hls::exp(exponent);
 
     w = w * pdf;
 
@@ -42,11 +34,7 @@ static theta_type normal_cdf(theta_type x) {
 // Black–Scholes pricing 
 // ---------------------------------------------------------------------
 static const theta_type invK     = 1.0f / K;
-#ifdef USE_HLS_MATH
 static const theta_type sqrtT    = hls::sqrt(T);
-#else
-static const theta_type sqrtT    = sqrt(T);
-#endif
 static const theta_type inv_sqrtT = 1.0f / sqrtT;
 
 static const theta_type sigma      = v;
@@ -65,29 +53,30 @@ void black_scholes_price(theta_type S_in, result_type &result) {
 
 
   theta_type S_over_K = S_in * invK;
-#ifdef USE_HLS_MATH
   theta_type log_S_over_K = hls::log(S_over_K);
-#else
-  theta_type log_S_over_K = log(S_over_K);
-#endif
-  theta_type numerator   = log_S_over_K + (r + 0.5f * sigma_sq) * T;
+  theta_type num_tmp = (r + 0.5f * sigma_sq);
+  theta_type numerator   = log_S_over_K + num_tmp * T;
 
   theta_type d1 = numerator * inv_denom;
-  theta_type d2 = d1 - sigma * sqrtT;
+  theta_type d2_tmp = sigma * sqrtT;
+  theta_type d2 = d1 - d2_tmp;
 
   theta_type Nd1       = normal_cdf(d1);
   theta_type Nd2       = normal_cdf(d2);
   theta_type Nminus_d1 = normal_cdf(-d1);
   theta_type Nminus_d2 = normal_cdf(-d2);
 
-#ifdef USE_HLS_MATH
   theta_type discount = hls::exp(-r * T);
-#else
-  theta_type discount = exp(-r * T);
-#endif
 
-  result.call = S_in * Nd1 - K * discount * Nd2;
-  result.put  = K * discount * Nminus_d2 - S_in * Nminus_d1;
+  theta_type call_tmp1 = S_in * Nd1;
+  theta_type call_tmp2 = K * discount;
+  theta_type call_tmp3 = call_tmp2 * Nd2;
+  result.call = call_tmp1 - call_tmp3;
+
+  theta_type put_tmp1 = K * discount;
+  theta_type put_tmp2 = put_tmp1 * Nminus_d2;
+  theta_type put_tmp3 = S_in * Nminus_d1;
+  result.put  = put_tmp2 - put_tmp3;
 }
 
 void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
