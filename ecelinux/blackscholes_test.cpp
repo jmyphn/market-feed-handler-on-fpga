@@ -67,7 +67,7 @@ int main() {
     }
 
     infile.close();
-    std::cout << "Loaded " << N << " Black–Scholes test vectors.\n";
+    std::cout << "Loaded " << N << " Black–Scholes test vectors.\n\n";
 
     int errors = 0;
 

@@ -23,10 +23,11 @@ OBInput make_delete(order_ref_t ref) {
 }
 
 int main() {
-    cout << "Starting HLS OrderBook tests" << endl;
 
     hls::stream<OBInput>  in_stream;
     hls::stream<OBOutput> out_stream;
+
+    int N = 0;
 
     // Sequence:
     // add(b, id0, 1, 10)
@@ -45,11 +46,13 @@ int main() {
 
     // Drive DUT until inputs consumed
     while (!in_stream.empty()) {
+        N++;
         orderbook_dut(in_stream, out_stream);
     }
 
     bool good = true;
     int i = 0;
+    int errors = 0;
 
     while (!out_stream.empty() && i < expected_size) {
         OBOutput o = out_stream.read();
@@ -60,6 +63,7 @@ int main() {
                  << ": expected " << expected[i]
                  << ", got " << actual << endl;
             good = false;
+            errors++;
         }
         i++;
     }
@@ -75,6 +79,15 @@ int main() {
         good = false;
     }
 
-    cout << "Finished tests: " << (good ? "PASS" : "FAIL") << endl;
+    cout << "\n";
+    cout << "============================================\n";
+    cout << " Orderbook FPGA Testbench Summary\n";
+    cout << "============================================\n";
+    cout << "Total test instances: " << N << "\n";
+    cout << "Total mismatches:     " << errors << "\n";
+    cout << "Error rate:           "
+              << std::setprecision(4)
+              << (100.0 * errors / N) << "%\n";
+    cout << "============================================\n";
     return good ? 0 : 1;
 }
