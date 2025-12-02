@@ -32,6 +32,8 @@ void itch_msg_handler(
 #pragma HLS INLINE off
 
     if (!itch_parsed.empty()) {
+
+        // Read the 7 standard words produced by itch_dut
         bit32_t w0 = itch_parsed.read();
         bit32_t w1 = itch_parsed.read();
         bit32_t w2 = itch_parsed.read();
@@ -47,40 +49,88 @@ void itch_msg_handler(
         msg.type = 0;
         bool valid = true;
 
-        if (msg_type_char == 'A') {
-            msg.type = MSG_ADD;
-            msg.add.orderReferenceNumber = make_ref(w1, w2);
-            msg.add.buySellIndicator = (side_char == 'B') ? 'B' : 'S';
-            msg.add.shares = (shares_t)((ap_uint<32>)w5);
-            msg.add.price  = (price_t)((ap_uint<32>)w6);
-        } else if (msg_type_char == 'D') {
-            msg.type = MSG_DELETE;
-            msg.del.orderReferenceNumber = make_ref(w1, w2);
-        } else if (msg_type_char == 'E') {
-            msg.type = MSG_EXEC;
-            msg.exec.orderReferenceNumber = make_ref(w1, w2);
-            msg.exec.executedShares = (shares_t)((ap_uint<32>)w5);
-        } else if (msg_type_char == 'X') {
-            msg.type = MSG_CANCEL;
-            msg.cancel.orderReferenceNumber = make_ref(w1, w2);
-            msg.cancel.cancelledShares = (shares_t)((ap_uint<32>)w5);
-        } else {
-            valid = false;
-        }
+        order_ref_t id_hi  = w1;
+        order_ref_t id_lo  = w2;
+        order_ref_t id     = (id_hi << 32) | id_lo;
 
-#ifndef __SYNTHESIS__
-        if (valid) {
-            std::cout << "[ITCH] type=" << msg_type_char
-                      << " side=" << side_char
-                      << " price_raw=" << (unsigned)w6 << " ";
+        order_ref_t newid_hi = w3;
+        order_ref_t newid_lo = w4;
+        order_ref_t newid    = (newid_hi << 32) | newid_lo;
+
+        shares_t shares = (shares_t)((ap_uint<32>)w5);
+        price_t  price  = (price_t)((ap_uint<32>)w6);
+
+        switch (msg_type_char) {
+
+        // ------------------------------------------------------
+        // A — Add Order
+        // ------------------------------------------------------
+        case 'A':
+            msg.type = MSG_ADD;
+            msg.add.orderReferenceNumber = id;
+            msg.add.buySellIndicator     = (side_char == 'B') ? 'B' : 'S';
+            msg.add.shares               = shares;
+            msg.add.price                = price;
+            break;
+
+        // ------------------------------------------------------
+        // E — Order Executed
+        // ------------------------------------------------------
+        case 'E':
+            msg.type = MSG_EXEC;
+            msg.exec.orderReferenceNumber = id;
+            msg.exec.executedShares       = shares;
+            break;
+
+        // ------------------------------------------------------
+        // C — Order Executed With Price
+        // Treat exactly like 'E' (same semantics for your OB)
+        // ------------------------------------------------------
+        case 'C':
+            msg.type = MSG_EXEC;
+            msg.exec.orderReferenceNumber = id;
+            msg.exec.executedShares       = shares;
+            break;
+
+        // ------------------------------------------------------
+        // X — Order Cancel
+        // ------------------------------------------------------
+        case 'X':
+            msg.type = MSG_CANCEL;
+            msg.cancel.orderReferenceNumber = id;
+            msg.cancel.cancelledShares      = shares;
+            break;
+
+        // ------------------------------------------------------
+        // D — Order Delete
+        // ------------------------------------------------------
+        case 'D':
+            msg.type = MSG_DELETE;
+            msg.del.orderReferenceNumber = id;
+            break;
+
+        // ------------------------------------------------------
+        // U — Order Replace
+        // ------------------------------------------------------
+        case 'U':
+            msg.type = MSG_REPLACE;
+            msg.repl.originalOrderReferenceNumber = id;
+            msg.repl.newOrderReferenceNumber      = newid;
+            msg.repl.shares                       = shares;
+            msg.repl.price                        = price;
+            break;
+
+        default:
+            valid = false;
+            break;
         }
-#endif
 
         if (valid) {
             ob_in.write(msg);
         }
     }
 }
+
 
 // ============================================================================
 // STAGE 4: Black-Scholes Preprocessor
@@ -153,7 +203,11 @@ void dut(
     hls::stream<bit32_t> &strm_in,
     hls::stream<bs_out_t> &strm_out
 ) {
+#pragma HLS INTERFACE ap_fifo port=strm_in
+#pragma HLS INTERFACE ap_fifo port=strm_out
+#pragma HLS INTERFACE ap_ctrl_none port=return
 #pragma HLS DATAFLOW
+
 
     // Internal streams connecting pipeline stages
     static hls::stream<bit32_t> itch_parsed("itch_parsed");
