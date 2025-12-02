@@ -136,7 +136,7 @@ void orderbook(hls::stream<ParsedMessage> &orders,
       keep_slim(ask_pq, shares_per_order);
       pq_push(ask_pq, order);
     }
-    hash_tbl_put(shares_per_order, order.order_id, order.shares);
+    hash_tbl_put(shares_per_order, order.new_order_id, order.shares);
     break;
 
   default:
