@@ -55,7 +55,7 @@ public:
     #pragma HLS INLINE
         // Initialize orders
         for (int i = 0; i < MAX_ORDERS; i++) {
-        #pragma HLS UNROLL factor=2
+        #pragma HLS PIPELINE II=1
             orders[i].valid = false;
             orders[i].prev  = -1;
             orders[i].next  = -1;
@@ -63,7 +63,7 @@ public:
 
         // Initialize bid levels
         for (int i = 0; i < MAX_LEVELS; i++) {
-        #pragma HLS UNROLL factor=2
+        #pragma HLS PIPELINE II=1
             bidLevels[i].valid = false;
             bidLevels[i].limitVolume = 0;
             bidLevels[i].firstOrder = -1;
@@ -72,7 +72,7 @@ public:
 
         // Initialize ask levels
         for (int i = 0; i < MAX_LEVELS; i++) {
-        #pragma HLS UNROLL factor=2
+        #pragma HLS PIPELINE II=1
             askLevels[i].valid = false;
             askLevels[i].limitVolume = 0;
             askLevels[i].firstOrder = -1;

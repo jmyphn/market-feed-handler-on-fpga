@@ -1,56 +1,12 @@
 #include <iostream>
 #include <cmath>
 #include "blackscholes.hpp"
+#include "hls_math.h"
 
 theta_type K = 100.0f; // Strike price
 theta_type r = 0.05f;  // Risk-free rate 
 theta_type v = 0.2f;   // Volatility of the underlying 
 theta_type T = 1.0f;   // One year until expiry
-
-template <typename T>
-T custom_log(const T& x) {
-  #pragma HLS INLINE
-  if (x <= 0) {
-    std::cerr << "Error: Input must be greater than 0" << std::endl;
-    return -1.0; 
-  }
-
-  const int logTerms = 10;
-
-  T result = 0.0;
-  T term = (x - 1) / (x + 1);
-  T term_squared = term * term;
-  T numerator = term;
-  T denominator = 1;
-
-  for (int i = 1; i <= logTerms; i++) {
-    // #pragma HLS pipeline II=1
-    #pragma HLS UNROLL
-    result += numerator / denominator;
-    numerator *= term_squared;
-    denominator += 2;
-  }
-
-  return 2 * result;
-}
-
-template <typename T>
-T custom_exp(const T& x) {
-  #pragma HLS INLINE
-  T result = 1.0;
-  T term = 1.0;
-  const int expTerms = 10;
-
-  for (int i = 1; i <= expTerms; i++) {
-    // #pragma HLS pipeline II=1
-    #pragma HLS UNROLL
-    term *= x / (T)i;
-    result += term;
-  }
-
-  return result;
-}
-
 
 static theta_type normal_cdf(theta_type x) {
 #pragma HLS INLINE
@@ -67,8 +23,7 @@ static theta_type normal_cdf(theta_type x) {
 
     theta_type exponent = -0.5f * L * L;
 
-    // SAFE for both HLS and g++
-    theta_type pdf = theta_type(0.3989422804014327f) * ::expf(exponent);;
+    theta_type pdf = theta_type(0.3989422804014327f) * hls::exp(exponent);;
 
     w = w * pdf;
 
@@ -76,12 +31,11 @@ static theta_type normal_cdf(theta_type x) {
 }
 
 
-
 // ---------------------------------------------------------------------
 // Black–Scholes pricing 
 // ---------------------------------------------------------------------
 static const theta_type invK     = 1.0f / K;
-static const theta_type sqrtT    = std::sqrt(T);
+static const theta_type sqrtT    = hls::sqrt(T);
 static const theta_type inv_sqrtT = 1.0f / sqrtT;
 
 static const theta_type sigma      = v;
@@ -100,7 +54,7 @@ void black_scholes_price(theta_type S_in, result_type &result) {
 
 
   theta_type S_over_K = S_in * invK;
-  theta_type log_S_over_K = custom_log<theta_type>(S_over_K);
+  theta_type log_S_over_K = hls::log(S_over_K);
   theta_type numerator   = log_S_over_K + (r + 0.5f * sigma_sq) * T;
 
   theta_type d1 = numerator * inv_denom;
@@ -111,7 +65,7 @@ void black_scholes_price(theta_type S_in, result_type &result) {
   theta_type Nminus_d1 = normal_cdf(-d1);
   theta_type Nminus_d2 = normal_cdf(-d2);
 
-  theta_type discount = custom_exp<theta_type>(-r * T);
+  theta_type discount = hls::exp(-r * T);
 
   result.call = S_in * Nd1 - K * discount * Nd2;
   result.put  = K * discount * Nminus_d2 - S_in * Nminus_d1;

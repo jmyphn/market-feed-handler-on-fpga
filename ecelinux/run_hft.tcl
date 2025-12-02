@@ -14,8 +14,6 @@ set_top dut
 
 # Add design and testbench files
 add_files itch.cpp -cflags "-std=c++11"
-add_files priority_queue.cpp -cflags "-std=c++11"
-add_files hash_tbl.cpp -cflags "-std=c++11"
 add_files orderbook.cpp -cflags "-std=c++11"
 add_files blackscholes.cpp -cflags "-std=c++11"
 add_files hft.cpp -cflags "-std=c++11"
