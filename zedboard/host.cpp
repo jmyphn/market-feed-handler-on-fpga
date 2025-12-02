@@ -10,7 +10,6 @@
 
 #include "blackscholes.hpp"
 #include "itch.hpp"
-#include "priority_queue.hpp"
 #include "orderbook.hpp"
 #include "timer.h"
 
@@ -48,12 +47,21 @@ int main(int argc, char **argv) {
   const char* buffer;
   int nbytes;
   int messages_sent = 0;
+  int valid_messages = 0;  // Count only messages that will produce output
 
   timer.start();
 
   // Loop through all messages in the file
   while ((buffer = reader.nextMessage())) {
       uint16_t message_length = ITCH::Parser::getMessageLength(buffer);
+      
+      // Check the message type (at offset 2, after the length header)
+      char msg_type = *(buffer + 2);
+      
+      // Only these message types produce output: A (Add), D (Delete), E (Execute), X (Cancel)
+      if (msg_type == 'A' || msg_type == 'D' || msg_type == 'E' || msg_type == 'X') {
+          valid_messages++;
+      }
       
       // 1. Send the message length (as a 32-bit integer)
       uint32_t length_to_send = message_length;
@@ -72,15 +80,15 @@ int main(int argc, char **argv) {
       messages_sent++;
   }
 
-  std::cout << "All messages sent (" << messages_sent << " total). Waiting for results from FPGA..." << std::endl;
+  std::cout << "All messages sent (" << messages_sent << " total, " << valid_messages << " valid). Waiting for results from FPGA..." << std::endl;
 
   // Read results from the FPGA
-  // Expect one 64-bit result (call + put prices) per message sent
+  // Expect one 64-bit result (call + put prices) per VALID message sent
   uint64_t result_data;
   int results_received = 0;
   
-  for (int i = 0; i < messages_sent; i++) {
-    std::cout << "Receiving result " << (i+1) << " of " << messages_sent << "..." << std::endl;
+  for (int i = 0; i < valid_messages; i++) {
+    std::cout << "Receiving result " << (i+1) << " of " << valid_messages << "..." << std::endl;
       nbytes = read(fdr, (void*)&result_data, sizeof(result_data));
       if (nbytes <= 0) {
           std::cerr << "Error: Expected " << messages_sent << " results but only received " << results_received << std::endl;
@@ -104,7 +112,7 @@ int main(int argc, char **argv) {
 
   // Report 
   std::cout << "Finished." << std::endl;
-  std::cout << "Sent " << messages_sent << " messages and received " << results_received << " results." << std::endl;
+  std::cout << "Sent " << messages_sent << " messages (" << valid_messages << " valid) and received " << results_received << " results." << std::endl;
 
   // Close the channels
   close(fdr);

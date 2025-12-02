@@ -31,56 +31,67 @@ void itch_msg_handler(
 #pragma HLS PIPELINE II=1
 #pragma HLS INLINE off
 
-    if (!itch_parsed.empty()) {
-        bit32_t w0 = itch_parsed.read();
-        bit32_t w1 = itch_parsed.read();
-        bit32_t w2 = itch_parsed.read();
-        bit32_t w3 = itch_parsed.read();
-        bit32_t w4 = itch_parsed.read();
-        bit32_t w5 = itch_parsed.read();
-        bit32_t w6 = itch_parsed.read();
+    // In a DATAFLOW region, this function must block until data is available.
+    // The non-blocking check `!stream.empty()` is an anti-pattern here, as it
+    // can cause the module to terminate prematurely if data isn't ready on the
+    // exact cycle it is checked, leading to dropped messages.
+    bit32_t w0 = itch_parsed.read();
+    bit32_t w1 = itch_parsed.read();
+    bit32_t w2 = itch_parsed.read();
+    bit32_t w3 = itch_parsed.read();
+    bit32_t w4 = itch_parsed.read();
+    bit32_t w5 = itch_parsed.read();
+    bit32_t w6 = itch_parsed.read();
 
-        char msg_type_char = (char)w0(7,0);
-        char side_char     = (char)w0(15,8);
+    char msg_type_char = (char)w0(7,0);
+    char side_char     = (char)w0(15,8);
 
-        OBInput msg;
-        msg.type = 0;
-        bool valid = true;
+    OBInput msg;
+    msg.type = 0;
+    bool valid = true;
 
-        if (msg_type_char == 'A') {
-            msg.type = MSG_ADD;
-            msg.add.orderReferenceNumber = make_ref(w1, w2);
-            msg.add.stockLocate = 0;
-            msg.add.timestamp   = 0;
-            msg.add.buySellIndicator = (side_char == 'B') ? 'B' : 'S';
-            msg.add.shares = (shares_t)((ap_uint<32>)w5);
-            msg.add.price  = (price_t)((ap_uint<32>)w6);
-        } else if (msg_type_char == 'D') {
-            msg.type = MSG_DELETE;
-            msg.del.orderReferenceNumber = make_ref(w1, w2);
-        } else if (msg_type_char == 'E') {
-            msg.type = MSG_EXEC;
-            msg.exec.orderReferenceNumber = make_ref(w1, w2);
-            msg.exec.executedShares = (shares_t)((ap_uint<32>)w5);
-        } else if (msg_type_char == 'X') {
-            msg.type = MSG_CANCEL;
-            msg.cancel.orderReferenceNumber = make_ref(w1, w2);
-            msg.cancel.cancelledShares = (shares_t)((ap_uint<32>)w5);
-        } else {
-            valid = false;
-        }
+    if (msg_type_char == 'A') {
+        msg.type = MSG_ADD;
+        msg.add.orderReferenceNumber = make_ref(w1, w2);
+        msg.add.stockLocate = 0;
+        msg.add.timestamp   = 0;
+        msg.add.buySellIndicator = (side_char == 'B') ? 'B' : 'S';
+        msg.add.shares = (shares_t)((ap_uint<32>)w5);
+        msg.add.price  = (price_t)((ap_uint<32>)w6);
+    } else if (msg_type_char == 'C') {
+        msg.type = MSG_CANCEL;
+        msg.cancel.orderReferenceNumber = make_ref(w1, w2);
+        msg.cancel.cancelledShares = (shares_t)((ap_uint<32>)w5);
+    } else if (msg_type_char == 'D') {
+        msg.type = MSG_DELETE;
+        msg.del.orderReferenceNumber = make_ref(w1, w2);
+    } else if (msg_type_char == 'E') {
+        msg.type = MSG_EXEC;
+        msg.exec.orderReferenceNumber = make_ref(w1, w2);
+        msg.exec.executedShares = (shares_t)((ap_uint<32>)w5);
+    } else if (msg_type_char == 'U') {
+        msg.type = MSG_UPDATE;
+        msg.update.orderReferenceNumber = make_ref(w1, w2);
+        msg.update.newShares = (shares_t)((ap_uint<32>)w5);
+        msg.update.newPrice = (price_t)((ap_uint<32>)w6);
+    } else if (msg_type_char == 'X') {
+        msg.type = MSG_CANCEL;
+        msg.cancel.orderReferenceNumber = make_ref(w1, w2);
+        msg.cancel.cancelledShares = (shares_t)((ap_uint<32>)w5);
+    } else {
+        valid = false;
+    }
 
 #ifndef __SYNTHESIS__
-        if (valid) {
-            std::cout << "[ITCH] type=" << msg_type_char
-                      << " side=" << side_char
-                      << " price_raw=" << (unsigned)w6 << " ";
-        }
+    if (valid) {
+        std::cout << "[ITCH] type=" << msg_type_char
+                  << " side=" << side_char
+                  << " price_raw=" << (unsigned)w6 << " ";
+    }
 #endif
 
-        if (valid) {
-            ob_in.write(msg);
-        }
+    if (valid) {
+        ob_in.write(msg);
     }
 }
 
@@ -95,12 +106,15 @@ void bs_preprocessor(
 #pragma HLS PIPELINE II=1
 #pragma HLS INLINE off
 
-    if (!ob_out.empty()) {
-        OBOutput ob = ob_out.read();
+    // In a DATAFLOW region, this function must block until data is available.
+    // The non-blocking check `!stream.empty()` is an anti-pattern here, as it
+    // can cause the module to terminate prematurely if data isn't ready on the
+    // exact cycle it is checked, leading to dropped messages.
+    OBOutput ob = ob_out.read();
 
-        price_t bid = ob.bestBid;
-        price_t ask = ob.bestAsk;
-        price_t mid_int;
+    price_t bid = ob.bestBid;
+    price_t ask = ob.bestAsk;
+    price_t mid_int;
 
         if (bid == 0 && ask == 0) {
             mid_int = 0;
@@ -122,7 +136,6 @@ void bs_preprocessor(
         union { float f; uint32_t u; } conv;
         conv.f = spot_price;
         bs_in.write((bit32_t)conv.u);
-    }
 }
 
 // ============================================================================
@@ -136,16 +149,18 @@ void bs_postprocessor(
 #pragma HLS PIPELINE II=1
 #pragma HLS INLINE off
 
-    if (!bs_hw_out.empty()) {
-        bit32_t call_bits = bs_hw_out.read();
-        bit32_t put_bits  = bs_hw_out.read();
+    // In a DATAFLOW region, this function must block until data is available.
+    // The non-blocking check `!stream.empty()` is an anti-pattern here, as it
+    // can cause the module to terminate prematurely if data isn't ready on the
+    // exact cycle it is checked, leading to dropped messages.
+    bit32_t call_bits = bs_hw_out.read();
+    bit32_t put_bits  = bs_hw_out.read();
 
-        bs_out_t out64;
-        out64.range(31,0)  = call_bits;
-        out64.range(63,32) = put_bits;
+    bs_out_t out64;
+    out64.range(31,0)  = call_bits;
+    out64.range(63,32) = put_bits;
 
-        strm_out.write(out64);
-    }
+    strm_out.write(out64);
 }
 
 // ============================================================================
@@ -153,7 +168,8 @@ void bs_postprocessor(
 // ============================================================================
 void dut(
     hls::stream<bit32_t> &strm_in,
-    hls::stream<bs_out_t> &strm_out
+    hls::stream<bs_out_t> &strm_out,
+    int num_msgs
 ) {
 #pragma HLS DATAFLOW
 
@@ -171,10 +187,16 @@ void dut(
 #pragma HLS STREAM variable=bs_hw_out   depth=4
 
     // Six-stage pipeline (each function runs concurrently)
-    itch_dut(strm_in, itch_parsed);           // Stage 1: ITCH parser
-    itch_msg_handler(itch_parsed, ob_in);     // Stage 2: ITCH message handler
-    orderbook_dut(ob_in, ob_out);             // Stage 3: Order book
-    bs_preprocessor(ob_out, bs_in);           // Stage 4: BS preprocessor
-    bs_dut(bs_in, bs_hw_out);                 // Stage 5: Black-Scholes engine
-    bs_postprocessor(bs_hw_out, strm_out);    // Stage 6: BS postprocessor
+    itch_dut(strm_in, itch_parsed, num_msgs);           // Stage 1: ITCH parser
+    for (int i = 0; i < num_msgs; ++i) {
+#pragma HLS PIPELINE
+        itch_msg_handler(itch_parsed, ob_in);     // Stage 2: ITCH message handler
+    }
+    orderbook_dut(ob_in, ob_out, num_msgs);             // Stage 3: Order book
+    for (int i = 0; i < num_msgs; ++i) {
+#pragma HLS PIPELINE
+        bs_preprocessor(ob_out, bs_in);           // Stage 4: BS preprocessor
+        bs_dut(bs_in, bs_hw_out);                 // Stage 5: Black-Scholes engine
+        bs_postprocessor(bs_hw_out, strm_out);    // Stage 6: BS postprocessor
+    }
 }

@@ -26,52 +26,60 @@ static inline ap_uint<32> read_u32_be(const char* p) {
     return v;
 }
 
-void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
-    // Input processing
-    bit32_t hdr    = strm_in.read();
-    uint16_t msg_len = (uint16_t)hdr(15, 0);
+void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out, int num_msgs) {
+    for (int k=0; k<num_msgs; ++k) {
+#pragma HLS PIPELINE
+        // Input processing
+        bit32_t hdr    = strm_in.read();
+        uint16_t msg_len = (uint16_t)hdr(15, 0);
 
-    char in_buffer[MAX_MESSAGE_SIZE];   // 36 bytes is enough for our ITCH msgs
-    int  idx   = 0;
-    int  words = (msg_len + 3) >> 2;    // # of 32-bit words = ceil(msg_len/4)
+        char in_buffer[MAX_MESSAGE_SIZE];   // 36 bytes is enough for our ITCH msgs
+        int  idx   = 0;
+        int  words = (msg_len + 3) >> 2;    // # of 32-bit words = ceil(msg_len/4)
 
-    for (int w = 0; w < words; ++w) {
-    #pragma HLS PIPELINE II=1
-        bit32_t word = strm_in.read();
+        // A pipelined loop with a variable trip count is an anti-pattern at the start
+        // of a DATAFLOW region. It can cause the scheduler to misjudge timing and drop
+        // the last message. Unrolling the loop gives this function a fixed, predictable
+        // latency, which resolves the pipeline stall.
+        read_words: for (int w = 0; w < 10; ++w) { // Max words for ITCH msg is ceil(38/4) = 10
+        #pragma HLS UNROLL
+            if (w < words) {
+                bit32_t word = strm_in.read();
 
-        if (idx < msg_len){
-            in_buffer[idx++] = (char)word(31,24);
-            in_buffer[idx++] = (char)word(23,16);
-            in_buffer[idx++] = (char)word(15, 8);
-            in_buffer[idx++] = (char)word( 7, 0);
-        } 
-    }
+                if (idx < msg_len){
+                    in_buffer[idx++] = (char)word(31,24);
+                    in_buffer[idx++] = (char)word(23,16);
+                    in_buffer[idx++] = (char)word(15, 8);
+                    in_buffer[idx++] = (char)word( 7, 0);
+                }
+            }
+        }
 
-    // Optional debug: reconstructed message
 #ifdef ITCH_DEBUG_PRINT
-    std::cout << "DUT's reconstructed msg:      ";
-    for (int i = 0; i < msg_len; ++i) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0')
-                  << (unsigned int)(unsigned char)in_buffer[i] << " ";
-    }
-    std::cout << std::dec << "\n";
+        std::cout << "DUT received msg (" << msg_len << " bytes): ";
+        for (int i = 0; i < msg_len; ++i) {
+            std::cout << std::hex << std::setw(2) << std::setfill('0')
+                      << (unsigned int)(unsigned char)in_buffer[i] << " ";
+        }
+        std::cout << std::dec << "\n";
 #endif
 
-    ParsedMessage parsed = parser(in_buffer);
+        ParsedMessage parsed = parser(in_buffer);
 
-    // ------------------------------------------------------
-    // Output processing
-    // ------------------------------------------------------
-    bit32_t w0 = 0;
-    w0(7,0)   = parsed.type;
-    w0(15,8)  = parsed.side;
-    strm_out.write(w0);
-    strm_out.write((bit32_t)parsed.order_id.range(63,32));
-    strm_out.write((bit32_t)parsed.order_id.range(31, 0));
-    strm_out.write((bit32_t)parsed.new_order_id.range(63,32));
-    strm_out.write((bit32_t)parsed.new_order_id.range(31, 0));
-    strm_out.write((bit32_t)parsed.shares);
-    strm_out.write((bit32_t)parsed.price);
+        // ------------------------------------------------------
+        // Output processing
+        // ------------------------------------------------------
+        bit32_t w0 = 0;
+        w0(7,0)   = parsed.type;
+        w0(15,8)  = parsed.side;
+        strm_out.write(w0);
+        strm_out.write((bit32_t)parsed.order_id.range(63,32));
+        strm_out.write((bit32_t)parsed.order_id.range(31, 0));
+        strm_out.write((bit32_t)parsed.new_order_id.range(63,32));
+        strm_out.write((bit32_t)parsed.new_order_id.range(31, 0));
+        strm_out.write((bit32_t)parsed.shares);
+        strm_out.write((bit32_t)parsed.price);
+    }
 }
 
 ParsedMessage parser(char* buffer) {
