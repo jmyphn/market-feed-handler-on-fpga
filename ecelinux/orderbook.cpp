@@ -5,13 +5,11 @@
 // ===============================================================
 
 // Index type for arrays (-1 = none)
-typedef ap_int<16> idx_t;
+typedef ap_int<12> idx_t;
 
 struct Order {
     order_ref_t referenceNumber;
-    stock_loc_t stockLocate;
-    timestamp_t timestamp;
-    char        side;      // 'B' or 'S'
+    char        side;     // 'B' / 'S'
     shares_t    shares;
     price_t     price;
 
@@ -20,6 +18,7 @@ struct Order {
 
     bool        valid;
 };
+
 
 struct Level {
     price_t price;
@@ -31,8 +30,8 @@ struct Level {
     bool valid;
 };
 
-#define MAX_ORDERS 1024
-#define MAX_LEVELS 256
+#define MAX_ORDERS 768
+#define MAX_LEVELS 128
 #define SIDE_BUY   'B'
 #define SIDE_SELL  'S'
 
@@ -85,7 +84,7 @@ public:
     // -----------------------------------------------------------
 
     idx_t find_free_order_slot() {
-    #pragma HLS INLINE
+    #pragma HLS INLINE off
         for (int i = 0; i < MAX_ORDERS; i++) {
         #pragma HLS PIPELINE II=1
             if (!orders[i].valid)
@@ -95,7 +94,7 @@ public:
     }
 
     idx_t find_order(order_ref_t ref) {
-    #pragma HLS INLINE
+    #pragma HLS INLINE off
         for (int i = 0; i < MAX_ORDERS; i++) {
         #pragma HLS PIPELINE II=1
             if (orders[i].valid && orders[i].referenceNumber == ref)
@@ -113,7 +112,7 @@ public:
     }
 
     idx_t find_level_idx(char side, price_t price) {
-    #pragma HLS INLINE
+    #pragma HLS INLINE off
         Level* levels = level_array(side);
         for (int i = 0; i < MAX_LEVELS; i++) {
         #pragma HLS PIPELINE II=1
@@ -124,7 +123,7 @@ public:
     }
 
     idx_t allocate_level(char side, price_t price) {
-    #pragma HLS INLINE
+    #pragma HLS INLINE off
         Level* levels = level_array(side);
         for (int i = 0; i < MAX_LEVELS; i++) {
         #pragma HLS PIPELINE II=1
@@ -171,9 +170,7 @@ public:
 
         Order& o = orders[slot];
         o.referenceNumber = msg.orderReferenceNumber;
-        o.stockLocate = msg.stockLocate;
-        o.timestamp = msg.timestamp;
-        o.side = msg.buySellIndicator;
+        o.side  = msg.buySellIndicator;
         o.shares = msg.shares;
         o.price  = msg.price;
         o.prev = -1;
@@ -209,10 +206,12 @@ public:
         else
             lvl.firstOrder = o.next;
 
-        if (o.next != -1)
-            orders[o.next].prev = o.prev;
-        else
-            lvl.lastOrder = o.prev;
+        idx_t p = o.prev;
+        idx_t n = o.next;
+        if (p != -1) orders[p].next = n;
+        else         lvl.firstOrder = n;
+        if (n != -1) orders[n].prev = p;
+        else         lvl.lastOrder  = p;
 
         o.prev = -1;
         o.next = -1;
@@ -305,9 +304,6 @@ public:
         o.valid = false;
 
         AddOrderMsg newMsg;
-        newMsg.orderReferenceNumber = msg.newOrderReferenceNumber;
-        newMsg.stockLocate = o.stockLocate;
-        newMsg.timestamp = msg.timestamp;
         newMsg.buySellIndicator = side;
         newMsg.shares = msg.shares;
         newMsg.price = msg.price;
@@ -320,12 +316,12 @@ public:
     // -----------------------------------------------------------
 
     price_t getBestBid() const {
-    #pragma HLS INLINE
+    #pragma HLS INLINE off
         price_t best = 0;
         const Level* lvls = bidLevels;
 
         for (int i = 0; i < MAX_LEVELS; i++) {
-        #pragma HLS PIPELINE II=1
+        #pragma HLS PIPELINE II=2
             if (lvls[i].valid && lvls[i].limitVolume > 0) {
                 if (lvls[i].price > best)
                     best = lvls[i].price;
@@ -342,7 +338,7 @@ public:
         const Level* lvls = askLevels;
 
         for (int i = 0; i < MAX_LEVELS; i++) {
-        #pragma HLS PIPELINE II=1
+        #pragma HLS PIPELINE II=2
             if (lvls[i].valid && lvls[i].limitVolume > 0) {
                 if (!found || lvls[i].price < best) {
                     best = lvls[i].price;

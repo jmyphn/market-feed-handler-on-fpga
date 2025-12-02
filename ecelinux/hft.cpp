@@ -117,8 +117,29 @@ void dut(
         OBOutput ob = ob_out.read();
 
         // Use best bid as the spot price (in price_t units)
-        price_t px_int = ob.bestBid;
-        float spot_price = ((float)px_int) / 10000.0f;
+        // Compute mid-price = average(bestBid, bestAsk)
+        price_t bid = ob.bestBid;
+        price_t ask = ob.bestAsk;
+
+        // If either side missing, fall back gracefully
+        price_t mid_int;
+
+        if (bid == 0 && ask == 0) {
+            mid_int = 0;
+        } 
+        else if (bid == 0) {
+            mid_int = ask;
+        }
+        else if (ask == 0) {
+            mid_int = bid;
+        }
+        else {
+            mid_int = (bid + ask) >> 1;    // divide by 2 using hardware shift
+        }
+
+        // Convert ticks → float dollars
+        float spot_price = ((float)mid_int) / 10000.0f;
+
 
 #ifndef __SYNTHESIS__
         std::cout << "Spot=" << std::fixed << std::setprecision(4)
