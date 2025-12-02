@@ -11,7 +11,7 @@ struct Order {
     order_ref_t referenceNumber;
     stock_loc_t stockLocate;
     timestamp_t timestamp;
-    char        side;      // 'B' or 'S'
+    char        side; 
     shares_t    shares;
     price_t     price;
 
