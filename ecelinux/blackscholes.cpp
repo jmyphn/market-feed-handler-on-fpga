@@ -1,10 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include "blackscholes.hpp"
-
-#ifdef USE_HLS_MATH
 #include "hls_math.h"
-#endif
 
 theta_type K = 100.0f; // Strike price
 theta_type r = 0.05f;  // Risk-free rate 
@@ -26,11 +23,7 @@ static theta_type normal_cdf(theta_type x) {
 
     theta_type exponent = -0.5f * L * L;
 
-#ifdef USE_HLS_MATH
     theta_type pdf = theta_type(0.3989422804014327f) * hls::exp(exponent);;
-#else
-    theta_type pdf = theta_type(0.3989422804014327f) * exp(exponent);;
-#endif
 
     w = w * pdf;
 
@@ -42,11 +35,7 @@ static theta_type normal_cdf(theta_type x) {
 // Black–Scholes pricing 
 // ---------------------------------------------------------------------
 static const theta_type invK     = 1.0f / K;
-#ifdef USE_HLS_MATH
 static const theta_type sqrtT    = hls::sqrt(T);
-#else
-static const theta_type sqrtT    = sqrt(T);
-#endif
 static const theta_type inv_sqrtT = 1.0f / sqrtT;
 
 static const theta_type sigma      = v;
@@ -65,11 +54,7 @@ void black_scholes_price(theta_type S_in, result_type &result) {
 
 
   theta_type S_over_K = S_in * invK;
-#ifdef USE_HLS_MATH
   theta_type log_S_over_K = hls::log(S_over_K);
-#else
-  theta_type log_S_over_K = log(S_over_K);
-#endif
   theta_type numerator   = log_S_over_K + (r + 0.5f * sigma_sq) * T;
 
   theta_type d1 = numerator * inv_denom;
@@ -80,11 +65,7 @@ void black_scholes_price(theta_type S_in, result_type &result) {
   theta_type Nminus_d1 = normal_cdf(-d1);
   theta_type Nminus_d2 = normal_cdf(-d2);
 
-#ifdef USE_HLS_MATH
   theta_type discount = hls::exp(-r * T);
-#else
-  theta_type discount = exp(-r * T);
-#endif
 
   result.call = S_in * Nd1 - K * discount * Nd2;
   result.put  = K * discount * Nminus_d2 - S_in * Nminus_d1;

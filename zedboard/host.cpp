@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 
   // Use ITCH Reader to open and parse a data file
   // NOTE: The path is relative to where the executable is run from
-  const char* data_file = "data/12302019/filtered_500";
+  const char* data_file = "data/12302019/filtered_10_per_type";
   ITCH::Reader reader(data_file);
   if (!reader.isOpen()) {
       std::cerr << "Failed to open data file: " << data_file << std::endl;
@@ -80,25 +80,28 @@ int main(int argc, char **argv) {
   int results_received = 0;
   
   for (int i = 0; i < messages_sent; i++) {
-    std::cout << "Receiving result " << (i+1) << " of " << messages_sent << "..." << std::endl;
-      nbytes = read(fdr, (void*)&result_data, sizeof(result_data));
-      if (nbytes <= 0) {
-          std::cerr << "Error: Expected " << messages_sent << " results but only received " << results_received << std::endl;
-          break;
-      }
-      assert(nbytes == sizeof(result_data));
-      
-      // Extract call and put prices from the 64-bit result
-      uint32_t call_bits = result_data & 0xFFFFFFFF;
-      uint32_t put_bits = (result_data >> 32) & 0xFFFFFFFF;
-      
-      float call_price, put_price;
-      memcpy(&call_price, &call_bits, sizeof(float));
-      memcpy(&put_price, &put_bits, sizeof(float));
-      
-      std::cout << "Message " << (i+1) << ": Call=" << call_price << ", Put=" << put_price << std::endl;
-      results_received++;
+      std::cout << "Receiving result " << (i+1) << " of " << messages_sent << "..." << std::endl;
+
+      uint32_t low, high;
+
+      // Read LOW 32 bits
+      nbytes = read(fdr, &low, sizeof(low));
+      assert(nbytes == sizeof(low));
+
+      // Read HIGH 32 bits
+      nbytes = read(fdr, &high, sizeof(high));
+      assert(nbytes == sizeof(high));
+
+      float call, put;
+      memcpy(&call, &low,  sizeof(float));
+      memcpy(&put,  &high, sizeof(float));
+
+      std::cout << "Message " << (i+1)
+                << ": Call=" << call
+                << ", Put="  << put
+                << std::endl;
   }
+
 
   timer.stop();
 
