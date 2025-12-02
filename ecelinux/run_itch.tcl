@@ -1,7 +1,7 @@
 #=============================================================================
-# run_base.tcl 
+# run_itch.tcl 
 #=============================================================================
-# @brief: A Tcl script for synthesizing the baseline digit recongnition design.
+# @brief: A Tcl script for synthesizing the ITCH parser design.
 
 # Project name
 set hls_prj itch.prj
@@ -9,7 +9,7 @@ set hls_prj itch.prj
 # Open/reset the project
 open_project ${hls_prj} -reset
 
-# Top function of the design is "dut"
+# Top function of the design is "itch_dut"
 set_top itch_dut
 
 # Add design and testbench files

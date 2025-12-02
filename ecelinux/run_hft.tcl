@@ -1,20 +1,25 @@
 #=============================================================================
-# run_blackscholes.tcl 
+# run_hft.tcl 
 #=============================================================================
-# @brief: A Tcl script for synthesizing the black-scholes design.
+# @brief: A Tcl script for synthesizing the full-system design.
 
 # Project name
-set hls_prj blackscholes.prj
+set hls_prj hft.prj
 
 # Open/reset the project
 open_project ${hls_prj} -reset
 
-# Top function of the design is "dut"
-set_top dut
+# Top function of the design is "hft"
+set_top hft
 
 # Add design and testbench files
+add_files itch.cpp -cflags "-std=c++11"
+add_files priority_queue.cpp -cflags "-std=c++11"
+add_files hash_tbl.cpp -cflags "-std=c++11"
+add_files orderbook.cpp -cflags "-std=c++11"
 add_files blackscholes.cpp -cflags "-std=c++11"
-add_files -tb blackscholes_test.cpp -cflags "-std=c++11"
+add_files hft.cpp -cflags "-std=c++11"
+add_files -tb hft_test.cpp -cflags "-std=c++11"
 add_files -tb data
 
 open_solution "solution1"

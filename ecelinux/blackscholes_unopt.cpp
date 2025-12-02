@@ -9,7 +9,6 @@ theta_type T = 1.0f;   // One year until expiry
 
 template <typename T>
 T custom_log(const T& x) {
-  #pragma HLS INLINE
   if (x <= 0) {
     std::cerr << "Error: Input must be greater than 0" << std::endl;
     return -1.0; 
@@ -24,8 +23,6 @@ T custom_log(const T& x) {
   T denominator = 1;
 
   for (int i = 1; i <= logTerms; i++) {
-    // #pragma HLS pipeline II=1
-    #pragma HLS UNROLL
     result += numerator / denominator;
     numerator *= term_squared;
     denominator += 2;
@@ -36,14 +33,11 @@ T custom_log(const T& x) {
 
 template <typename T>
 T custom_exp(const T& x) {
-  #pragma HLS INLINE
   T result = 1.0;
   T term = 1.0;
   const int expTerms = 10;
 
   for (int i = 1; i <= expTerms; i++) {
-    // #pragma HLS pipeline II=1
-    #pragma HLS UNROLL
     term *= x / (T)i;
     result += term;
   }
@@ -52,58 +46,33 @@ T custom_exp(const T& x) {
 }
 
 
-static theta_type normal_cdf(theta_type x) {
-#pragma HLS INLINE
-    const theta_type a1 = 0.31938153f;
-    const theta_type a2 = -0.356563782f;
-    const theta_type a3 = 1.781477937f;
-    const theta_type a4 = -1.821255978f;
-    const theta_type a5 = 1.330274429f;
-
-    theta_type L = (x >= 0.0f) ? x : -x;
-    theta_type k = 1.0f / (1.0f + 0.2316419f * L);
-
-    theta_type w = ((((a5 * k + a4) * k + a3) * k + a2) * k + a1) * k;
-
-    theta_type exponent = -0.5f * L * L;
-
-    // SAFE for both HLS and g++
-    theta_type pdf = theta_type(0.3989422804014327f) * ::expf(exponent);;
-
-    w = w * pdf;
-
-    return (x >= 0.0f) ? (1.0f - w) : w;
+static theta_type normal_cdf(theta_type x)
+{
+  const theta_type inv_sqrt2 = 0.7071067811865475f; // 1/sqrt(2)
+  return 0.5f * (1.0f + std::erf(x * inv_sqrt2));
 }
-
-
 
 // ---------------------------------------------------------------------
 // Black–Scholes pricing 
 // ---------------------------------------------------------------------
-static const theta_type invK     = 1.0f / K;
-static const theta_type sqrtT    = std::sqrt(T);
-static const theta_type inv_sqrtT = 1.0f / sqrtT;
-
-static const theta_type sigma      = v;
-static const theta_type sigma_sq   = v * v;
-static const theta_type denom      = sigma * sqrtT;
-static const theta_type inv_denom  = 1.0f / denom;
-
-
 void black_scholes_price(theta_type S_in, result_type &result) {
-  #pragma HLS INLINE
   if (S_in <= 0 || K <= 0 || v <= 0 || T <= 0) {
     result.call = 0.0f;
     result.put  = 0.0f;
     return;
   }
 
+  theta_type sigma   = v;
+  theta_type sqrtT   = std::sqrt(T); 
+  theta_type S_over_K = S_in / K;
 
-  theta_type S_over_K = S_in * invK;
   theta_type log_S_over_K = custom_log<theta_type>(S_over_K);
-  theta_type numerator   = log_S_over_K + (r + 0.5f * sigma_sq) * T;
+  theta_type sigma_sq     = sigma * sigma;
 
-  theta_type d1 = numerator * inv_denom;
+  theta_type numerator   = log_S_over_K + (r + 0.5f * sigma_sq) * T;
+  theta_type denominator = sigma * sqrtT;
+
+  theta_type d1 = numerator / denominator;
   theta_type d2 = d1 - sigma * sqrtT;
 
   theta_type Nd1       = normal_cdf(d1);
@@ -118,7 +87,6 @@ void black_scholes_price(theta_type S_in, result_type &result) {
 }
 
 void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
-  #pragma HLS INLINE off
   // Read spot price from input stream
   bit32_t in_bits = strm_in.read();
 
