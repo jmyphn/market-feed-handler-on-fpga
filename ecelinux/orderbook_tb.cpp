@@ -9,8 +9,6 @@ OBInput make_add(char side, order_ref_t ref, shares_t shares, price_t price) {
     OBInput m;
     m.type = MSG_ADD;  // numeric 0..4 fits in ap_uint<3>
     m.add.orderReferenceNumber = ref;
-    m.add.stockLocate = 0;
-    m.add.timestamp   = 0;
     m.add.buySellIndicator = (side == 'b' || side == 'B') ? 'B' : 'S';
     m.add.shares = shares;
     m.add.price  = price;

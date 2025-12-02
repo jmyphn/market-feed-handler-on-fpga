@@ -13,6 +13,11 @@ VHLS_INC=$(XILINX_VIVADO)/include
 # Specify compilation flags
 CFLAGS=-g -I${VHLS_INC} -DHLS_NO_XIL_FPO_LIB -std=c++11 -O3
 
+ifeq ($(USE_HLS_MATH),1)
+    CFLAGS += -DUSE_HLS_MATH
+    LDFLAGS = -L/opt/xilinx/Vivado/2019.2/lnx64/tools/fpo_v7_0 -lhls_fpo
+endif
+
 TCL_SCRIPT=run_hft.tcl
 
 .PHONY: all itch_csim bs_csim orderbook_csim bitstream clean
@@ -42,7 +47,7 @@ orderbook_csim: result/orderbook_csim.txt
 	@echo "Result recorded to $<"
 
 bs: blackscholes_test.cpp blackscholes.cpp
-	g++ ${CFLAGS} $^ -o $@ -lrt
+	g++ ${CFLAGS} $^ -o $@ -lrt ${LDFLAGS}
 
 result/bs_csim.txt: bs
 	@echo "Running Black–Scholes sim..."
@@ -53,7 +58,7 @@ bs_csim: result/bs_csim.txt
 	@echo "Result recorded to $<"
 
 hft: hft_test.cpp hft.cpp itch.cpp orderbook.cpp blackscholes.cpp
-	g++ ${CFLAGS} $^ -o $@ -lrt
+	g++ ${CFLAGS} $^ -o $@ -lrt ${LDFLAGS}
 
 result/hft_csim.txt: hft
 	@echo "Running hft sim..."
