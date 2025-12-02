@@ -205,7 +205,7 @@ void dut(
 ) {
 #pragma HLS INTERFACE ap_fifo port=strm_in
 #pragma HLS INTERFACE ap_fifo port=strm_out
-#pragma HLS INTERFACE ap_ctrl_none port=return
+#pragma HLS INTERFACE ap_ctrl_hs port=return
 #pragma HLS DATAFLOW
 
 
