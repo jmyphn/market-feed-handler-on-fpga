@@ -9,7 +9,7 @@ typedef ap_uint<64> timestamp_t;
 typedef ap_uint<32> price_t;
 typedef ap_uint<32> shares_t;
 
-// ---------- Message types ----------
+// ---------- Message type enum (CPU-side semantics) ----------
 enum MsgType {
     MSG_ADD     = 0,
     MSG_EXEC    = 1,
@@ -18,13 +18,12 @@ enum MsgType {
     MSG_REPLACE = 4
 };
 
-
 // ---------- Message payloads ----------
 struct AddOrderMsg {
     order_ref_t orderReferenceNumber;
     stock_loc_t stockLocate;
     timestamp_t timestamp;
-    char        buySellIndicator;
+    char        buySellIndicator; // 'B' or 'S'
     shares_t    shares;
     price_t     price;
 };
@@ -51,9 +50,9 @@ struct OrderReplaceMsg {
     price_t     price;
 };
 
-// ---------- Unified input packet ----------
+// ---------- Unified input packet to the orderbook ----------
 struct OBInput {
-    MsgType type;
+    ap_uint<3> type;  // Encodes MsgType (0..4)
     AddOrderMsg      add;
     OrderExecutedMsg exec;
     OrderCancelMsg   cancel;
@@ -61,13 +60,13 @@ struct OBInput {
     OrderReplaceMsg  repl;
 };
 
-// ---------- Output packet ----------
+// ---------- Output packet from the orderbook ----------
 struct OBOutput {
-    price_t bestBid;
-    price_t bestAsk;
+    price_t     bestBid;
+    price_t     bestAsk;
     ap_uint<16> orderCount;
 };
 
-// ---------- Declare top function ----------
-void orderbook_dut(hls::stream<OBInput>& in,
-                   hls::stream<OBOutput>& out);
+// ---------- Top-level HLS orderbook DUT ----------
+void orderbook_dut(hls::stream<OBInput> &in,
+                   hls::stream<OBOutput> &out);

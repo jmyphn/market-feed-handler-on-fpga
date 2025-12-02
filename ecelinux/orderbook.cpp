@@ -336,7 +336,7 @@ public:
 
     price_t getBestAsk() const {
     #pragma HLS INLINE
-        bool found = false;
+        bool   found = false;
         price_t best = 0;
 
         const Level* lvls = askLevels;
@@ -369,8 +369,8 @@ public:
 // ===============================================================
 // TOP LEVEL FUNCTION
 // ===============================================================
-void orderbook_dut(hls::stream<OBInput>& in,
-                   hls::stream<OBOutput>& out) {
+void orderbook_dut(hls::stream<OBInput> &in,
+                   hls::stream<OBOutput> &out) {
 #pragma HLS INTERFACE axis port=in
 #pragma HLS INTERFACE axis port=out
 #pragma HLS INTERFACE ap_ctrl_none port=return
@@ -381,18 +381,20 @@ void orderbook_dut(hls::stream<OBInput>& in,
     if (!in.empty()) {
         OBInput msg = in.read();
 
-    switch ((MsgType)msg.type) {
-        case MSG_ADD:     ob.add_order(msg.add);     break;
-        case MSG_EXEC:    ob.execute_order(msg.exec);break;
-        case MSG_CANCEL:  ob.cancel_order(msg.cancel);break;
-        case MSG_DELETE:  ob.delete_order(msg.del);  break;
-        case MSG_REPLACE: ob.replace_order(msg.repl);break;
-    }
+        MsgType mt = static_cast<MsgType>(msg.type.to_uint());
 
+        switch (mt) {
+            case MSG_ADD:     ob.add_order(msg.add);      break;
+            case MSG_EXEC:    ob.execute_order(msg.exec); break;
+            case MSG_CANCEL:  ob.cancel_order(msg.cancel);break;
+            case MSG_DELETE:  ob.delete_order(msg.del);   break;
+            case MSG_REPLACE: ob.replace_order(msg.repl); break;
+            default: break;
+        }
 
         OBOutput o;
-        o.bestBid = ob.getBestBid();
-        o.bestAsk = ob.getBestAsk();
+        o.bestBid    = ob.getBestBid();
+        o.bestAsk    = ob.getBestAsk();
         o.orderCount = ob.countOrders();
 
         out.write(o);

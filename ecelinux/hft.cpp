@@ -13,36 +13,39 @@
 // Combined output type: pack call + put into 64 bits
 typedef ap_uint<64> bs_out_t;
 
+static order_ref_t make_ref(bit32_t hi, bit32_t lo) {
+    order_ref_t r = (order_ref_t)hi;
+    r <<= 32;
+    r |= (order_ref_t)lo;
+    return r;
+}
+
 void dut(
-    hls::stream<bit32_t> &strm_in,   
-    hls::stream<bs_out_t> &strm_out  
+    hls::stream<bit32_t> &strm_in,    // raw ITCH 32-bit words
+    hls::stream<bs_out_t> &strm_out   // packed BS output
 ) {
 #pragma HLS DATAFLOW
 
     // Internal streams
-    static hls::stream<bit32_t>       itch_parsed("itch_parsed");
-    static hls::stream<ParsedMessage> msg_stream("msg_stream");
-    static hls::stream<bit32_t>       spot_stream("spot_stream");
+    static hls::stream<bit32_t> itch_parsed("itch_parsed");
+    static hls::stream<OBInput> ob_in("ob_in");
+    static hls::stream<OBOutput> ob_out("ob_out");
 
-    // Streams for Black-Scholes 
     static hls::stream<bit32_t> bs_in("bs_in");
     static hls::stream<bit32_t> bs_hw_out("bs_hw_out");
 
 #pragma HLS STREAM variable=itch_parsed depth=32
-#pragma HLS STREAM variable=msg_stream  depth=32
-#pragma HLS STREAM variable=spot_stream depth=32
+#pragma HLS STREAM variable=ob_in       depth=32
+#pragma HLS STREAM variable=ob_out      depth=32
 #pragma HLS STREAM variable=bs_in       depth=4
 #pragma HLS STREAM variable=bs_hw_out   depth=4
 
-
-    // ---------------------------------------------------------------------
+    // ----------------------------------------------------------
     // Stage 1: ITCH Parser
-    // ---------------------------------------------------------------------
+    // ----------------------------------------------------------
     itch_dut(strm_in, itch_parsed);
 
     if (!itch_parsed.empty()) {
-        ParsedMessage p;
-
         bit32_t w0 = itch_parsed.read();
         bit32_t w1 = itch_parsed.read();
         bit32_t w2 = itch_parsed.read();
@@ -51,43 +54,75 @@ void dut(
         bit32_t w5 = itch_parsed.read();
         bit32_t w6 = itch_parsed.read();
 
-        p.type = (ap_uint<8>)w0(7,0);
-        p.side = (ap_uint<8>)w0(15,8);
-        p.order_id     = ((ap_uint<64>)((uint32_t)w1), (uint32_t)w2);
-        p.new_order_id = ((ap_uint<64>)((uint32_t)w3), (uint32_t)w4);
-        p.shares = (uint32_t)w5;
-        p.price  = (uint32_t)w6;
+        char msg_type_char = (char)w0(7,0);
+        char side_char     = (char)w0(15,8);
+
+        OBInput msg;
+        msg.type = 0; // default
+
+        bool valid = true;
+
+        if (msg_type_char == 'A') {
+            // Add order
+            msg.type = MSG_ADD;
+            msg.add.orderReferenceNumber = make_ref(w1, w2);
+            msg.add.stockLocate = 0;
+            msg.add.timestamp   = 0;
+            msg.add.buySellIndicator = (side_char == 'B') ? 'B' : 'S';
+            msg.add.shares = (shares_t)((ap_uint<32>)w5);
+            msg.add.price  = (price_t)((ap_uint<32>)w6);
+        } else if (msg_type_char == 'D') {
+            // Delete order
+            msg.type = MSG_DELETE;
+            msg.del.orderReferenceNumber = make_ref(w1, w2);
+        } else if (msg_type_char == 'E') {
+            // Execute order
+            msg.type = MSG_EXEC;
+            msg.exec.orderReferenceNumber = make_ref(w1, w2);
+            msg.exec.executedShares       = (shares_t)((ap_uint<32>)w5);
+        } else if (msg_type_char == 'X') {
+            // Cancel (partial cancel)
+            msg.type = MSG_CANCEL;
+            msg.cancel.orderReferenceNumber = make_ref(w1, w2);
+            msg.cancel.cancelledShares      = (shares_t)((ap_uint<32>)w5);
+        } else {
+            valid = false;
+        }
 
 #ifndef __SYNTHESIS__
-        double price_display = p.price / 10000.0;
-        std::cout << "Type " << (char)p.type << " | "
-                  << "Msg Price=" << std::fixed << std::setprecision(4)
-                  << std::setw(8) << price_display << " | ";
+        if (valid) {
+            std::cout << "[ITCH] type=" << msg_type_char
+                      << " side=" << side_char
+                      << " price_raw=" << (unsigned)w6
+                      << " ";
+        }
 #endif
 
-        msg_stream.write(p);
+        if (valid) {
+            ob_in.write(msg);
+        }
     }
 
-
-    // ---------------------------------------------------------------------
+    // ----------------------------------------------------------
     // Stage 2: Orderbook
-    // ---------------------------------------------------------------------
-    if (!msg_stream.empty()) {
-        orderbook(msg_stream, spot_stream);
+    // ----------------------------------------------------------
+    if (!ob_in.empty()) {
+        orderbook_dut(ob_in, ob_out);
     }
 
-
-    // ---------------------------------------------------------------------
+    // ----------------------------------------------------------
     // Stage 3: Black–Scholes
-    // ---------------------------------------------------------------------
-    if (!spot_stream.empty()) {
+    // ----------------------------------------------------------
+    if (!ob_out.empty()) {
+        OBOutput ob = ob_out.read();
 
-        bit32_t spot_bits = spot_stream.read();
-        float spot_price = (float)spot_bits / 10000.0f;
+        // Use best bid as the spot price (in price_t units)
+        price_t px_int = ob.bestBid;
+        float spot_price = ((float)px_int) / 10000.0f;
 
 #ifndef __SYNTHESIS__
-        std::cout << "Spot Price=" << std::fixed << std::setprecision(4)
-                  << std::setw(8) << spot_price << " | ";
+        std::cout << "Spot=" << std::fixed << std::setprecision(4)
+                  << spot_price << " ";
 #endif
 
         // Convert spot float → raw bits
@@ -98,18 +133,14 @@ void dut(
         // Run BS accelerator
         bs_dut(bs_in, bs_hw_out);
 
-        // Read outputs
+        // Read call/put outputs
         bit32_t call_bits = bs_hw_out.read();
         bit32_t put_bits  = bs_hw_out.read();
 
-        // ------------------------------------------------------------------
-        // Pack call + put into a single 64-bit output stream
-        // ------------------------------------------------------------------
         bs_out_t out64;
         out64.range(31,0)  = call_bits;
         out64.range(63,32) = put_bits;
 
-        // Write packed output to the single Xillybus output stream
         strm_out.write(out64);
     }
 }
