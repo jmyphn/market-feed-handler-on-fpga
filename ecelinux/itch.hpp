@@ -20,6 +20,7 @@ struct ParsedMessage {
     ap_uint<64> new_order_id;
     ap_uint<32> shares;
     ap_uint<32> price;
+    ap_uint<64> timestamp;
 };
 
 // Top function for synthesis

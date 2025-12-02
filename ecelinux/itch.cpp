@@ -72,6 +72,7 @@ void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     strm_out.write((bit32_t)parsed.new_order_id.range(31, 0));
     strm_out.write((bit32_t)parsed.shares);
     strm_out.write((bit32_t)parsed.price);
+    strm_out.write((bit32_t)parsed.timestamp);
 }
 
 ParsedMessage parser(char* buffer) {
@@ -82,9 +83,28 @@ ParsedMessage parser(char* buffer) {
     out.new_order_id = 0;
     out.shares       = 0;
     out.price        = 0;
+    out.timestamp    = 0;
 
     char msgType = buffer[0];
     out.type = (ap_uint<8>)msgType;
+
+    // All relevant messages have timestamp at the same location
+    if (msgType == ITCH::AddOrderMessageType ||
+        msgType == ITCH::OrderExecutedMessageType ||
+        msgType == ITCH::OrderExecutedWithPriceMessageType ||
+        msgType == ITCH::OrderCancelMessageType ||
+        msgType == ITCH::OrderDeleteMessageType ||
+        msgType == ITCH::OrderReplaceMessageType) {
+        
+        // Timestamp is 48 bits (6 bytes) starting at byte 5
+        ap_uint<64> ts = 0;
+        for (int i = 0; i < 6; ++i) {
+        #pragma HLS PIPELINE II=1
+            ts <<= 8;
+            ts |= (ap_uint<64>)((unsigned char)buffer[5 + i]);
+        }
+        out.timestamp = ts;
+    }
 
     switch (msgType) {
 
