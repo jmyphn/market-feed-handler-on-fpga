@@ -62,12 +62,27 @@ int main(int argc, char **argv) {
       // 2. Send the message body, word by word (32-bit)
       // The message from the reader does not include the length field
       for (int i = 0; i < ceil(message_length / 4.0); ++i) {
-          uint32_t word = 0;
-          // Copy up to 4 bytes into a 32-bit word
-          memcpy(&word, buffer + 2 + i * 4, std::min(4, message_length - i * 4));
-          std::cout << "writing word: " << word << std::endl;
-          nbytes = write(fdw, (void*)&word, sizeof(word));
-          assert(nbytes == sizeof(word));
+
+        uint32_t word = 0;
+        int remaining = message_length - i * 4;
+        int to_copy   = std::min(4, remaining);
+
+        // Pack bytes so that buffer[2 + i*4] -> bits [31:24], etc.
+        for (int b = 0; b < to_copy; ++b) {
+            unsigned char byte = static_cast<unsigned char>(buffer[2 + i*4 + b]);
+            word |= (uint32_t)byte << (8 * (3 - b));
+        }
+
+        std::cout << "writing word: 0x" << std::hex << word << std::dec << std::endl;
+        nbytes = write(fdw, (void*)&word, sizeof(word));
+        assert(nbytes == sizeof(word));
+
+          // uint32_t word = 0;
+          // // Copy up to 4 bytes into a 32-bit word
+          // memcpy(&word, buffer + 2 + i * 4, std::min(4, message_length - i * 4));
+          // std::cout << "writing word: " << word << std::endl;
+          // nbytes = write(fdw, (void*)&word, sizeof(word));
+          // assert(nbytes == sizeof(word));
       }
       messages_sent++;
   }

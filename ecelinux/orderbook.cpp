@@ -225,24 +225,33 @@ public:
     }
 
     void cancel_order(const ParsedMessage& msg) {
-    #pragma HLS INLINE
         idx_t idx = find_order(msg.order_id);
         if (idx == -1) return;
 
         Order& o = orders[idx];
         char side = o.side;
+
         idx_t lvl_idx = find_level_idx(side, o.price);
         if (lvl_idx == -1) return;
 
         Level* lvls = level_array(side);
         Level& lvl = lvls[lvl_idx];
 
+        // Correct cancellation amount
         shares_t canc = msg.shares;
-        if (canc >= o.shares) canc = o.shares - 1;
+        if (canc > o.shares) canc = o.shares;
 
         o.shares -= canc;
         lvl.limitVolume -= canc;
+
+        // If order is fully canceled, remove it
+        if (o.shares == 0) {
+            o.valid = false;
+            remove_order_from_level(idx, lvl);
+            maybe_delete_level(side, lvl_idx);
+        }
     }
+
 
     void delete_order(const ParsedMessage& msg) {
     #pragma HLS INLINE
@@ -265,36 +274,37 @@ public:
     }
 
     void replace_order(const ParsedMessage& msg) {
-    #pragma HLS INLINE
         idx_t old = find_order(msg.order_id);
         if (old == -1) return;
 
         Order& o = orders[old];
         char side = o.side;
 
+        // Remove old order from its level
         idx_t lvl_idx = find_level_idx(side, o.price);
         if (lvl_idx != -1) {
             Level* lvls = level_array(side);
             Level& lvl = lvls[lvl_idx];
+
             lvl.limitVolume -= o.shares;
             remove_order_from_level(old, lvl);
             maybe_delete_level(side, lvl_idx);
         }
 
+        // Invalidate the old order
         o.valid = false;
 
-    // -----------------------------------------------------------
-    // -----------------------------------------------------------
-    // -----------------------------------------------------------
-    // -----------------------------------------------------------
-    // -----------------------------------------------------------
+        // Build new order correctly — MUST use msg.new_order_id
         ParsedMessage newMsg;
-        newMsg.side = side;
-        newMsg.shares = msg.shares;
-        newMsg.price = msg.price;
+        newMsg.type        = msg.type;
+        newMsg.order_id    = msg.new_order_id;
+        newMsg.side        = side;
+        newMsg.shares      = msg.shares;
+        newMsg.price       = msg.price;
 
         add_order(newMsg);
     }
+
 
     // -----------------------------------------------------------
     // Queries
@@ -319,25 +329,21 @@ public:
     }
 
     price_t getBestAsk() const {
-    #pragma HLS INLINE off
-        price_t best = 0;
-        bool found = false;
         const Level* lvls = askLevels;
+        bool found = false;
+        price_t best = 0;
 
         for (int i = 0; i < MAX_LEVELS; i++) {
-        #ifdef OPT
-        // #pragma HLS PIPELINE II=1
-        #endif
             if (lvls[i].valid && lvls[i].limitVolume > 0) {
-                if (lvls[i].price < best) {
+                if (!found || lvls[i].price < best) {
                     best = lvls[i].price;
+                    found = true;
                 }
-                found = true;
             }
         }
-
         return found ? best : price_t(0);
     }
+
 
     ap_uint<16> countOrders() const {
     #pragma HLS INLINE

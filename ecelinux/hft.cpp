@@ -42,14 +42,23 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     // ------------------------------------------------------
     ParsedMessage parsed = parser(in_buffer);
 
-    bit32_t spot_price = orderbook(&parsed);
+    bit32_t spot_price_ticks = orderbook(&parsed);
+
+    //
+    float S_f = (float)spot_price_ticks / 10000.0f;
+    union { float f; int i; } u_in;
+    u_in.f = S_f;
+    bit32_t spot_price_bits = (bit32_t)u_in.i;
+    result_type result = bs(spot_price_bits);
+    // result_type result = bs(spot_price);
+    //
     
     // Printing here is not synthesizable
     // double price_display = spot_price / 10000.0;
     // std::cout << std::fixed << std::setprecision(4)
     //          << "Spot_Price=" << std::setw(8) << price_display << " | ";
 
-    result_type result = bs(spot_price);
+    
 
     // ------------------------------------------------------
     // Output processing
