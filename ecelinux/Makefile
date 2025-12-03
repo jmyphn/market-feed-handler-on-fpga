@@ -68,17 +68,6 @@ result/hft_csim.txt: hft
 hft_csim: result/hft_csim.txt
 	@echo "Result recorded to $<"
 
-lft: lft_test.cpp lft.cpp itch.cpp orderbook.cpp blackscholes.cpp
-	g++ ${CFLAGS} $^ -o $@ -lrt ${LDFLAGS}
-
-result/lft_csim.txt: lft
-	@echo "Running lft sim..."
-	mkdir -p result
-	./$< | tee $@
-
-lft_csim: result/lft_csim.txt
-	@echo "Result recorded to $<"
-
 csim_ob: result/csim_ob.txt
 	@echo "Result recorded to $<"
 
@@ -93,5 +82,5 @@ bitstream: xillydemo.bit
 	@echo "Bitstream saved to $<"
 
 clean:
-	rm -rf itch bs orderbook lft hft *.dat *.prj *.log
+	rm -rf itch bs orderbook hft *.dat *.prj *.log
 	rm -rf zedboard_project* xillydemo.bit
