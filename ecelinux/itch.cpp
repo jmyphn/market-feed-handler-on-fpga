@@ -34,7 +34,7 @@ void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     bit32_t hdr    = strm_in.read();
     uint16_t msg_len = (uint16_t)hdr(15, 0);
     // bit4_t msg_len = (bit4_t)hdr(3, 0);
-    std::cerr << "hdr: " << (uint16_t)hdr(15, 0) << std::endl;
+    // std::cerr << "hdr: " << (uint16_t)hdr(15, 0) << std::endl;
     // assert((uint16_t)hdr(15, 0) <= 15);
     assert(msg_len == (uint16_t)hdr(15, 0));
 

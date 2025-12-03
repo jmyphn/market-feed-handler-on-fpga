@@ -41,6 +41,16 @@ typedef char char_8_t[8];
 typedef char char_10_t[10];
 typedef char char_20_t[20];
 
+
+struct ParsedMessage {
+    ap_uint<8>  type;
+    ap_uint<8>  side;
+    ap_uint<64> order_id;
+    ap_uint<64> new_order_id;
+    ap_uint<32> shares;
+    ap_uint<32> price;
+};
+
 #endif // TYPE_H
 
 #endif

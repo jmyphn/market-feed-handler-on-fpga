@@ -32,5 +32,6 @@ csim_design -O
 # Synthesize the design
 csynth_design
 # Co-simulate the design
-#cosim_design
+# cosim_design
+# cosim_design -rtl verilog -trace_level all -tool xsim -O
 exit

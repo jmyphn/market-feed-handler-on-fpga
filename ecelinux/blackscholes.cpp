@@ -8,6 +8,13 @@ theta_type r = 0.05f;  // Risk-free rate
 theta_type v = 0.2f;   // Volatility of the underlying 
 theta_type T = 1.0f;   // One year until expiry
 
+// Helper: bits → float
+float bits_to_float(bit32_t w) {
+    union { float f; uint32_t u; } u;
+    u.u = (uint32_t)w;
+    return u.f;
+}
+
 static theta_type normal_cdf(theta_type x) {
 #pragma HLS INLINE
     const theta_type a1 = 0.31938153f;
@@ -114,4 +121,20 @@ void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
     strm_out.write(icall);
     strm_out.write(iput);
   }
+}
+
+result_type bs(bit32_t spot_price) {
+    union {
+      float fval;
+      int   ival;
+    } u_in;
+
+    u_in.ival = static_cast<int>(spot_price);
+    theta_type S_in = u_in.fval;
+
+    // Compute Black–Scholes price
+    result_type result;
+    black_scholes_price(S_in, result);
+
+    return result;
 }

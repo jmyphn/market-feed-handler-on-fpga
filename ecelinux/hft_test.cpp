@@ -16,7 +16,7 @@ void dut(
     hls::stream<bs_out_t> &strm_out
 );
 
-static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_500";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_A";
 
 static inline bit32_t pack_header(uint16_t len) {
     bit32_t x = 0;

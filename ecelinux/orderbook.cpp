@@ -165,17 +165,17 @@ public:
     // Core order operations
     // -----------------------------------------------------------
 
-    void add_order(const AddOrderMsg& msg) {
+    void add_order(const ParsedMessage& msg) {
     #pragma HLS INLINE off
-        if (find_order(msg.orderReferenceNumber) != -1)
+        if (find_order(msg.order_id) != -1)
             return;
 
         idx_t slot = find_free_order_slot();
         if (slot == -1) return;
 
         Order& o = orders[slot];
-        o.referenceNumber = msg.orderReferenceNumber;
-        o.side  = msg.buySellIndicator;
+        o.referenceNumber = msg.order_id;
+        o.side  = msg.side;
         o.shares = msg.shares;
         o.price  = msg.price;
         o.valid = true;
@@ -197,9 +197,9 @@ public:
         Order& o = orders[idx];
     }
 
-    void execute_order(const OrderExecutedMsg& msg) {
+    void execute_order(const ParsedMessage& msg) {
     #pragma HLS INLINE
-        idx_t idx = find_order(msg.orderReferenceNumber);
+        idx_t idx = find_order(msg.order_id);
         if (idx == -1) return;
 
         Order& o = orders[idx];
@@ -211,7 +211,7 @@ public:
         Level* levels = level_array(side);
         Level& lvl = levels[lvl_idx];
 
-        shares_t exec = msg.executedShares;
+        shares_t exec = msg.shares;
         if (exec > o.shares) exec = o.shares;
 
         o.shares -= exec;
@@ -224,9 +224,9 @@ public:
         }
     }
 
-    void cancel_order(const OrderCancelMsg& msg) {
+    void cancel_order(const ParsedMessage& msg) {
     #pragma HLS INLINE
-        idx_t idx = find_order(msg.orderReferenceNumber);
+        idx_t idx = find_order(msg.order_id);
         if (idx == -1) return;
 
         Order& o = orders[idx];
@@ -237,16 +237,16 @@ public:
         Level* lvls = level_array(side);
         Level& lvl = lvls[lvl_idx];
 
-        shares_t canc = msg.cancelledShares;
+        shares_t canc = msg.shares;
         if (canc >= o.shares) canc = o.shares - 1;
 
         o.shares -= canc;
         lvl.limitVolume -= canc;
     }
 
-    void delete_order(const OrderDeleteMsg& msg) {
+    void delete_order(const ParsedMessage& msg) {
     #pragma HLS INLINE
-        idx_t idx = find_order(msg.orderReferenceNumber);
+        idx_t idx = find_order(msg.order_id);
         if (idx == -1) return;
 
         Order& o = orders[idx];
@@ -264,9 +264,9 @@ public:
         o.valid = false;
     }
 
-    void replace_order(const OrderReplaceMsg& msg) {
+    void replace_order(const ParsedMessage& msg) {
     #pragma HLS INLINE
-        idx_t old = find_order(msg.originalOrderReferenceNumber);
+        idx_t old = find_order(msg.order_id);
         if (old == -1) return;
 
         Order& o = orders[old];
@@ -283,8 +283,13 @@ public:
 
         o.valid = false;
 
-        AddOrderMsg newMsg;
-        newMsg.buySellIndicator = side;
+    // -----------------------------------------------------------
+    // -----------------------------------------------------------
+    // -----------------------------------------------------------
+    // -----------------------------------------------------------
+    // -----------------------------------------------------------
+        ParsedMessage newMsg;
+        newMsg.side = side;
         newMsg.shares = msg.shares;
         newMsg.price = msg.price;
 
@@ -346,37 +351,81 @@ public:
     }
 };
 
-// ===============================================================
-// TOP LEVEL FUNCTION
-// ===============================================================
-void orderbook_dut(hls::stream<OBInput> &in,
-                   hls::stream<OBOutput> &out) {
-#pragma HLS INTERFACE axis port=in
-#pragma HLS INTERFACE axis port=out
-#pragma HLS INTERFACE ap_ctrl_none port=return
+// // ===============================================================
+// // TOP LEVEL FUNCTION
+// // ===============================================================
+// void orderbook_dut(hls::stream<bit32_t> &strm_in,
+//                    hls::stream<bit32_t> &strm_out) {
+//     #pragma HLS INTERFACE axis port=in
+//     #pragma HLS INTERFACE axis port=out
+//     #pragma HLS INTERFACE ap_ctrl_none port=return
 
+
+//     // Input processing
+//     static OrderBook ob;
+//     #pragma HLS RESET variable=ob
+
+//     char in_buffer[7];
+//     int  idx   = 0;
+
+//     for (int i = 0; i < 7; i++) {
+//     // #pragma HLS PIPELINE II=1
+//         bit32_t in_word = strm_in.read();
+
+//         if (i == 0) {
+//             char type = (char)in_word(7,0);
+//         }
+
+//         switch (type) {
+//             case 'A': ob.add_order(msg.add);      break;
+//             case 'E': ob.execute_order(msg.exec); break;
+//             case 'C': ob.execute_order(msg.exec); break;
+//             case 'X': ob.cancel_order(msg.cancel);break;
+//             case 'D': ob.delete_order(msg.del);   break;
+//             case 'U': ob.replace_order(msg.repl); break;
+//         }
+//     }
+
+//     if (!in.empty()) {
+//         OBInput msg = in.read();
+
+//         MsgType mt = static_cast<MsgType>(msg.type.to_uint());
+
+//         switch (mt) {
+//             case MSG_ADD:     ob.add_order(msg.add);      break;
+//             case MSG_EXEC:    ob.execute_order(msg.exec); break;
+//             case MSG_CANCEL:  ob.cancel_order(msg.cancel);break;
+//             case MSG_DELETE:  ob.delete_order(msg.del);   break;
+//             case MSG_REPLACE: ob.replace_order(msg.repl); break;
+//             default: break;
+//         }
+
+//         OBOutput o;
+//         o.bestBid    = ob.getBestBid();
+//         o.bestAsk    = ob.getBestAsk();
+//         o.orderCount = ob.countOrders();
+
+//         out.write(o);
+//     }
+// }
+
+bit32_t orderbook(ParsedMessage* msg) {
     static OrderBook ob;
-#pragma HLS RESET variable=ob
+    char msgType = msg->type;
 
-    if (!in.empty()) {
-        OBInput msg = in.read();
+    switch (msgType) {
+        case 'A': ob.add_order      (*msg); break;
+        case 'E': ob.execute_order  (*msg); break;
+        case 'C': ob.execute_order  (*msg); break;
+        case 'X': ob.cancel_order   (*msg); break;
+        case 'D': ob.delete_order   (*msg); break;
+        case 'U': ob.replace_order  (*msg); break;
 
-        MsgType mt = static_cast<MsgType>(msg.type.to_uint());
-
-        switch (mt) {
-            case MSG_ADD:     ob.add_order(msg.add);      break;
-            case MSG_EXEC:    ob.execute_order(msg.exec); break;
-            case MSG_CANCEL:  ob.cancel_order(msg.cancel);break;
-            case MSG_DELETE:  ob.delete_order(msg.del);   break;
-            case MSG_REPLACE: ob.replace_order(msg.repl); break;
-            default: break;
-        }
-
-        OBOutput o;
-        o.bestBid    = ob.getBestBid();
-        o.bestAsk    = ob.getBestAsk();
-        o.orderCount = ob.countOrders();
-
-        out.write(o);
+    default:
+        break;
     }
+
+    bit32_t out = ob.getBestBid();
+    
+    return out;
 }

@@ -14,13 +14,6 @@ static inline bit32_t float_to_bits(float x) {
     return (bit32_t)u.u;
 }
 
-// Helper: bits → float
-static inline float bits_to_float(bit32_t w) {
-    union { float f; uint32_t u; } u;
-    u.u = (uint32_t)w;
-    return u.f;
-}
-
 int main() {
 
     // --------------------------------------------------------------

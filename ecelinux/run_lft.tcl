@@ -1,10 +1,10 @@
 #=============================================================================
-# run_hft.tcl 
+# run_lft.tcl 
 #=============================================================================
 # @brief: A Tcl script for synthesizing the full-system design.
 
 # Project name
-set hls_prj hft.prj
+set hls_prj lft.prj
 
 # Open/reset the project
 open_project ${hls_prj} -reset
@@ -16,8 +16,8 @@ set_top dut
 add_files itch.cpp -cflags "-std=c++11"
 add_files orderbook.cpp -cflags "-std=c++11"
 add_files blackscholes.cpp -cflags "-std=c++11"
-add_files hft.cpp -cflags "-std=c++11"
-add_files -tb hft_test.cpp -cflags "-std=c++11"
+add_files lft.cpp -cflags "-std=c++11"
+add_files -tb lft_test.cpp -cflags "-std=c++11"
 add_files -tb data
 
 open_solution "solution1"
