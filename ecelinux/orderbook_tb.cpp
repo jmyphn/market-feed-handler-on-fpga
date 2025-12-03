@@ -1,42 +1,93 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+
 #include "orderbook.hpp"
 
 typedef ap_uint<32> bit32_t;
 
+static const char* INPUT_ORDERBOOK_FILE = "data/orderbook_10.dat";
+
+// Convert uint32 -> float spot price
+static inline float ticks_to_float(bit32_t x) {
+    return (float)x.to_uint() / 10000.0f;
+}
+
 int main() {
+    std::ifstream infile(INPUT_ORDERBOOK_FILE);
 
-    hls::stream<bit32_t> in, out;
+    if (!infile.is_open()) {
+        std::cerr << "ERROR: could not open " << INPUT_ORDERBOOK_FILE << "\n";
+        return 1;
+    }
 
-    // -------------------------------------------------------
-    // Test 1: ADD order
-    // message format (7 words):
-    // [0]=type, [1]=orderRef, [2]=price, [3]=shares, [4]=side, [5]=unused, [6]=unused
-    // -------------------------------------------------------
+    hls::stream<bit32_t> in_stream;
+    hls::stream<bit32_t> out_stream;
 
-    bit32_t msg_add[7];
-    msg_add[0] = 'A';
-    msg_add[1] = 1001;   // reference
-    msg_add[2] = 5000;   // price
-    msg_add[3] = 10;     // shares
-    msg_add[4] = 'B';    // side
-    msg_add[5] = 0;
-    msg_add[6] = 0;
+    const int NMAX = 20000;
+    bit32_t msgs[NMAX][7];
 
-    for (int i = 0; i < 7; i++)
-        in.write(msg_add[i]);
+    int N = 0;
+    std::string line;
 
-    orderbook_dut(in, out);
+    // Read each line of the input file
+    while (std::getline(infile, line)) {
+        if (line.size() == 0) continue;
 
-    // -------------------------------------------------------
-    // Read output
-    // -------------------------------------------------------
-    bit32_t bestBid  = out.read();
-    bit32_t bestAsk  = out.read();
-    bit32_t count    = out.read();
+        std::stringstream ss(line);
 
-    printf("After 1 add:\n");
-    printf(" bestBid  = %u\n", bestBid.to_uint());
-    printf(" bestAsk  = %u\n", bestAsk.to_uint());
-    printf(" count    = %u\n", count.to_uint());
+        std::string w0, w1, w2, w3, w4, w5, w6;
+        char comma;
+
+        ss >> w0 >> comma
+           >> w1 >> comma
+           >> w2 >> comma
+           >> w3 >> comma
+           >> w4 >> comma
+           >> w5 >> comma
+           >> w6;
+
+        msgs[N][0] = (bit32_t)std::stoul(w0, nullptr, 16);
+        msgs[N][1] = (bit32_t)std::stoul(w1, nullptr, 16);
+        msgs[N][2] = (bit32_t)std::stoul(w2, nullptr, 16);
+        msgs[N][3] = (bit32_t)std::stoul(w3, nullptr, 16);
+        msgs[N][4] = (bit32_t)std::stoul(w4, nullptr, 16);
+        msgs[N][5] = (bit32_t)std::stoul(w5, nullptr, 16);
+        msgs[N][6] = (bit32_t)std::stoul(w6, nullptr, 16);
+
+        N++;
+        if (N >= NMAX) break;
+    }
+
+    infile.close();
+    std::cout << "Loaded " << N << " orderbook messages.\n\n";
+
+    // Process all messages
+    for (int i = 0; i < N; i++) {
+        // Write message to stream
+        for (int w = 0; w < 7; w++) in_stream.write(msgs[i][w]);
+
+        // Run DUT
+        orderbook_dut(in_stream, out_stream);
+
+        // Output spot price
+        bit32_t spot_bits = out_stream.read();
+        float spot = ticks_to_float(spot_bits);
+
+        std::cout << std::fixed << std::setprecision(4);
+        std::cout
+            << "Msg " << std::setw(5) << i
+            << " | SpotPrice=" << std::setw(10) << spot
+            << "\n";
+    }
+
+    std::cout << "\n============================================\n";
+    std::cout << " OrderBook FPGA Testbench Summary\n";
+    std::cout << "============================================\n";
+    std::cout << "Input file            : " << INPUT_ORDERBOOK_FILE << "\n";
+    std::cout << "Total messages tested : " << N << "\n";
+    std::cout << "============================================\n\n";
 
     return 0;
 }

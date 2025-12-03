@@ -357,62 +357,6 @@ public:
     }
 };
 
-// void orderbook_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
-//     #pragma HLS INTERFACE axis port=in
-//     #pragma HLS INTERFACE axis port=out
-//     #pragma HLS INTERFACE ap_ctrl_none port=return
-
-//     // ------------------------------------------------------
-//     // Input processing
-//     // ------------------------------------------------------
-//     static OrderBook ob;
-//     #pragma HLS RESET variable=ob
-
-//     ParsedMessage parsed;
-
-//     for (int i = 0; i < 7; i++) {
-//     // #pragma HLS PIPELINE II=1
-//         bit32_t in_word = strm_in.read();
-
-//         switch (i) {
-//             case '0': parsed.type = in_word(7,0); parsed.side = in_word(15,8); break;
-//             case '1': parsed.order_id.range(63,32) = in_word; break;
-//             case '2': parsed.order_id.range(31, 0) = in_word; break;
-//             case '3': parsed.new_order_id.range(63,32) = in_word; break;
-//             case '4': parsed.new_order_id.range(31, 0) = in_word; break;
-//             case '5': parsed.shares = in_word; break;
-//             case '6': parsed.price = in_word; break;
-//             default: break;
-//         }
-//     }
-
-//     bit32_t spot_price_ticks = orderbook(&parsed);
-
-//     float S_f = (float)spot_price_ticks / 10000.0f;
-//     union { float f; int i; } u_in;
-//     u_in.f = S_f;
-//     bit32_t spot_price_bits = (bit32_t)u_in.i;
-    
-//     result_type result = bs(spot_price_bits);
-
-//     // ------------------------------------------------------
-//     // Output processing
-//     // ------------------------------------------------------
-//     // Convert results back to 32-bit words
-//     union { float fval; int ival; } ucall;
-//     union { float fval; int ival; } uput;
-
-//     ucall.fval = result.call;
-//     uput.fval  = result.put;
-
-//     bit32_t icall = static_cast<bit32_t>(ucall.ival);
-//     bit32_t iput  = static_cast<bit32_t>(uput.ival);
-
-//     // Write output to stream (call, put)
-//     strm_out.write(icall);
-//     strm_out.write(iput);
-// }
-
 bit32_t orderbook(ParsedMessage* msg) {
     static OrderBook ob;
     char msgType = msg->type;
@@ -438,3 +382,66 @@ bit32_t orderbook(ParsedMessage* msg) {
     
     return avg;
 }
+
+
+void orderbook_dut(hls::stream<bit32_t> &strm_in,
+                   hls::stream<bit32_t> &strm_out)
+{
+
+    static OrderBook ob;
+
+    // Require 7 words per message
+    if (strm_in.size() < 7)
+        return;
+
+    // ---------------------------------------------------------
+    // Read raw 7-word message
+    // ---------------------------------------------------------
+    bit32_t w0 = strm_in.read();
+    bit32_t w1 = strm_in.read();
+    bit32_t w2 = strm_in.read();
+    bit32_t w3 = strm_in.read();
+    bit32_t w4 = strm_in.read();
+    bit32_t w5 = strm_in.read();
+    bit32_t w6 = strm_in.read();
+
+    ParsedMessage msg;
+
+    msg.type = (char)w0(7,0); // Msg Type
+    msg.side = (char)w0(15,8); // Side
+
+    // Decode order reference number
+    msg.order_id = 0;
+    msg.order_id.range(63,32) = w1;
+    msg.order_id.range(31, 0) = w2;
+
+    // Replace/cancel new order id fields unused
+    msg.new_order_id = 0;
+
+    // Decode shares + price
+    msg.shares = (shares_t)w5;
+    msg.price  = (price_t) w6;
+
+    // Update Orderbook
+    switch (msg.type) {
+        case 'A': ob.add_order(msg); break;
+        case 'E': ob.execute_order(msg); break;
+        case 'C': ob.execute_order(msg); break;
+        case 'X': ob.cancel_order(msg);  break;
+        case 'D': ob.delete_order(msg);  break;
+        case 'U': ob.replace_order(msg); break;
+        default: break;
+    }
+
+    // Calculate spot price
+    bit32_t bestBid = ob.getBestBid();
+    bit32_t bestAsk = ob.getBestAsk();
+    bit32_t spot = (bestBid + bestAsk) >> 1;
+
+    // Output spot price
+    strm_out.write(spot);
+}
+
+
+
+

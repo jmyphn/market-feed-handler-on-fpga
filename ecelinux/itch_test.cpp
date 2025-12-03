@@ -1,6 +1,6 @@
 #include "itch.hpp"
 
-static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_500";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_A";
 
 //------------------------------------------------------------------------
 // Parser testbench

@@ -35,15 +35,15 @@ result/itch_csim.txt: itch
 itch_csim: result/itch_csim.txt
 	@echo "Result recorded to $<"
 
-orderbook: orderbook.cpp orderbook_tb.cpp
+ob: orderbook.cpp orderbook_tb.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
 
-result/orderbook_csim.txt: orderbook
+result/ob_csim.txt: ob
 	@echo "Running orderbook sim..."
 	mkdir -p result
 	./$< | tee $@
 
-orderbook_csim: result/orderbook_csim.txt
+ob_csim: result/ob_csim.txt
 	@echo "Result recorded to $<"
 
 bs: blackscholes_test.cpp blackscholes.cpp
@@ -66,9 +66,6 @@ result/hft_csim.txt: hft
 	./$< | tee $@
 
 hft_csim: result/hft_csim.txt
-	@echo "Result recorded to $<"
-
-csim_ob: result/csim_ob.txt
 	@echo "Result recorded to $<"
 
 xillydemo.bit:
