@@ -357,61 +357,61 @@ public:
     }
 };
 
-void orderbook_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
-    #pragma HLS INTERFACE axis port=in
-    #pragma HLS INTERFACE axis port=out
-    #pragma HLS INTERFACE ap_ctrl_none port=return
+// void orderbook_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
+//     #pragma HLS INTERFACE axis port=in
+//     #pragma HLS INTERFACE axis port=out
+//     #pragma HLS INTERFACE ap_ctrl_none port=return
 
-    // ------------------------------------------------------
-    // Input processing
-    // ------------------------------------------------------
-    static OrderBook ob;
-    #pragma HLS RESET variable=ob
+//     // ------------------------------------------------------
+//     // Input processing
+//     // ------------------------------------------------------
+//     static OrderBook ob;
+//     #pragma HLS RESET variable=ob
 
-    ParsedMessage parsed;
+//     ParsedMessage parsed;
 
-    for (int i = 0; i < 7; i++) {
-    // #pragma HLS PIPELINE II=1
-        bit32_t in_word = strm_in.read();
+//     for (int i = 0; i < 7; i++) {
+//     // #pragma HLS PIPELINE II=1
+//         bit32_t in_word = strm_in.read();
 
-        switch (i) {
-            case '0': parsed.type = in_word(7,0); parsed.side = in_word(15,8); break;
-            case '1': parsed.order_id.range(63,32) = in_word; break;
-            case '2': parsed.order_id.range(31, 0) = in_word; break;
-            case '3': parsed.new_order_id.range(63,32) = in_word; break;
-            case '4': parsed.new_order_id.range(31, 0) = in_word; break;
-            case '5': parsed.shares = in_word; break;
-            case '6': parsed.price = in_word; break;
-            default: break;
-        }
-    }
+//         switch (i) {
+//             case '0': parsed.type = in_word(7,0); parsed.side = in_word(15,8); break;
+//             case '1': parsed.order_id.range(63,32) = in_word; break;
+//             case '2': parsed.order_id.range(31, 0) = in_word; break;
+//             case '3': parsed.new_order_id.range(63,32) = in_word; break;
+//             case '4': parsed.new_order_id.range(31, 0) = in_word; break;
+//             case '5': parsed.shares = in_word; break;
+//             case '6': parsed.price = in_word; break;
+//             default: break;
+//         }
+//     }
 
-    bit32_t spot_price_ticks = orderbook(&parsed);
+//     bit32_t spot_price_ticks = orderbook(&parsed);
 
-    float S_f = (float)spot_price_ticks / 10000.0f;
-    union { float f; int i; } u_in;
-    u_in.f = S_f;
-    bit32_t spot_price_bits = (bit32_t)u_in.i;
+//     float S_f = (float)spot_price_ticks / 10000.0f;
+//     union { float f; int i; } u_in;
+//     u_in.f = S_f;
+//     bit32_t spot_price_bits = (bit32_t)u_in.i;
     
-    result_type result = bs(spot_price_bits);
+//     result_type result = bs(spot_price_bits);
 
-    // ------------------------------------------------------
-    // Output processing
-    // ------------------------------------------------------
-    // Convert results back to 32-bit words
-    union { float fval; int ival; } ucall;
-    union { float fval; int ival; } uput;
+//     // ------------------------------------------------------
+//     // Output processing
+//     // ------------------------------------------------------
+//     // Convert results back to 32-bit words
+//     union { float fval; int ival; } ucall;
+//     union { float fval; int ival; } uput;
 
-    ucall.fval = result.call;
-    uput.fval  = result.put;
+//     ucall.fval = result.call;
+//     uput.fval  = result.put;
 
-    bit32_t icall = static_cast<bit32_t>(ucall.ival);
-    bit32_t iput  = static_cast<bit32_t>(uput.ival);
+//     bit32_t icall = static_cast<bit32_t>(ucall.ival);
+//     bit32_t iput  = static_cast<bit32_t>(uput.ival);
 
-    // Write output to stream (call, put)
-    strm_out.write(icall);
-    strm_out.write(iput);
-}
+//     // Write output to stream (call, put)
+//     strm_out.write(icall);
+//     strm_out.write(iput);
+// }
 
 bit32_t orderbook(ParsedMessage* msg) {
     static OrderBook ob;
