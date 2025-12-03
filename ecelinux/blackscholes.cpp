@@ -1,12 +1,16 @@
-#include <iostream>
 #include "blackscholes.hpp"
-// #include "hls_math.h"
-#include <cmath>
 
-theta_type K = 100.0f; // Strike price
+theta_type K = 200.0f; // Strike price
 theta_type r = 0.05f;  // Risk-free rate 
 theta_type v = 0.2f;   // Volatility of the underlying 
 theta_type T = 1.0f;   // One year until expiry
+
+// Helper: float → bits
+bit32_t float_to_bits(float x) {
+    union { float f; uint32_t u; } u;
+    u.f = x;
+    return (bit32_t)u.u;
+}
 
 // Helper: bits → float
 float bits_to_float(bit32_t w) {
@@ -37,7 +41,6 @@ static theta_type normal_cdf(theta_type x) {
     return (x >= 0.0f) ? (1.0f - w) : w;
 }
 
-
 // ---------------------------------------------------------------------
 // Black–Scholes pricing 
 // ---------------------------------------------------------------------
@@ -50,7 +53,6 @@ static const theta_type sigma_sq   = v * v;
 static const theta_type denom      = sigma * sqrtT;
 static const theta_type inv_denom  = 1.0f / denom;
 
-
 void black_scholes_price(theta_type S_in, result_type &result) {
   #pragma HLS INLINE
   if (S_in <= 0 || K <= 0 || v <= 0 || T <= 0) {
@@ -58,7 +60,6 @@ void black_scholes_price(theta_type S_in, result_type &result) {
     result.put  = 0.0f;
     return;
   }
-
 
   theta_type S_over_K = S_in * invK;
   theta_type log_S_over_K = std::log(S_over_K);
@@ -91,37 +92,43 @@ void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
   #pragma HLS INLINE off
   #pragma HLS PIPELINE II=1
   
-  if (!strm_in.empty()) {
-    // Read spot price from input stream
-    bit32_t in_bits = strm_in.read();
+  // ------------------------------------------------------
+  // Input processing
+  // ------------------------------------------------------
+  // Read spot price from input stream
+  bit32_t in_bits = strm_in.read();
 
-    union {
-      float fval;
-      int   ival;
-    } u_in;
+  union {
+    float fval;
+    int   ival;
+  } u_in;
 
-    u_in.ival = static_cast<int>(in_bits);
-    theta_type S_in = u_in.fval;
+  u_in.ival = static_cast<int>(in_bits);
+  theta_type S_in = u_in.fval;
 
-    // Compute Black–Scholes price
-    result_type result;
-    black_scholes_price(S_in, result);
+  // ------------------------------------------------------
+  // Call Black–Scholes price
+  // ------------------------------------------------------
+  result_type result;
+  black_scholes_price(S_in, result);
 
-    // Convert results back to 32-bit words
-    union { float fval; int ival; } ucall;
-    union { float fval; int ival; } uput;
+  // ------------------------------------------------------
+  // Output processing
+  // ------------------------------------------------------
+  // Convert results back to 32-bit words
+  union { float fval; int ival; } ucall;
+  union { float fval; int ival; } uput;
 
-    ucall.fval = result.call;
-    uput.fval  = result.put;
+  ucall.fval = result.call;
+  uput.fval  = result.put;
 
-    bit32_t icall = static_cast<bit32_t>(ucall.ival);
-    bit32_t iput  = static_cast<bit32_t>(uput.ival);
+  bit32_t icall = static_cast<bit32_t>(ucall.ival);
+  bit32_t iput  = static_cast<bit32_t>(uput.ival);
 
-    // Write output to stream (call, put)
-    strm_out.write(icall);
-    strm_out.write(iput);
+  // Write output to stream (call, put)
+  strm_out.write(icall);
+  strm_out.write(iput);
   }
-}
 
 result_type bs(bit32_t spot_price) {
     union {

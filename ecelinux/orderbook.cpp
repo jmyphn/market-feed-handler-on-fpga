@@ -357,63 +357,61 @@ public:
     }
 };
 
-// // ===============================================================
-// // TOP LEVEL FUNCTION
-// // ===============================================================
-// void orderbook_dut(hls::stream<bit32_t> &strm_in,
-//                    hls::stream<bit32_t> &strm_out) {
-//     #pragma HLS INTERFACE axis port=in
-//     #pragma HLS INTERFACE axis port=out
-//     #pragma HLS INTERFACE ap_ctrl_none port=return
+void orderbook_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
+    #pragma HLS INTERFACE axis port=in
+    #pragma HLS INTERFACE axis port=out
+    #pragma HLS INTERFACE ap_ctrl_none port=return
 
+    // ------------------------------------------------------
+    // Input processing
+    // ------------------------------------------------------
+    static OrderBook ob;
+    #pragma HLS RESET variable=ob
 
-//     // Input processing
-//     static OrderBook ob;
-//     #pragma HLS RESET variable=ob
+    ParsedMessage parsed;
 
-//     char in_buffer[7];
-//     int  idx   = 0;
+    for (int i = 0; i < 7; i++) {
+    // #pragma HLS PIPELINE II=1
+        bit32_t in_word = strm_in.read();
 
-//     for (int i = 0; i < 7; i++) {
-//     // #pragma HLS PIPELINE II=1
-//         bit32_t in_word = strm_in.read();
+        switch (i) {
+            case '0': parsed.type = in_word(7,0); parsed.side = in_word(15,8); break;
+            case '1': parsed.order_id.range(63,32) = in_word; break;
+            case '2': parsed.order_id.range(31, 0) = in_word; break;
+            case '3': parsed.new_order_id.range(63,32) = in_word; break;
+            case '4': parsed.new_order_id.range(31, 0) = in_word; break;
+            case '5': parsed.shares = in_word; break;
+            case '6': parsed.price = in_word; break;
+            default: break;
+        }
+    }
 
-//         if (i == 0) {
-//             char type = (char)in_word(7,0);
-//         }
+    bit32_t spot_price_ticks = orderbook(&parsed);
 
-//         switch (type) {
-//             case 'A': ob.add_order(msg.add);      break;
-//             case 'E': ob.execute_order(msg.exec); break;
-//             case 'C': ob.execute_order(msg.exec); break;
-//             case 'X': ob.cancel_order(msg.cancel);break;
-//             case 'D': ob.delete_order(msg.del);   break;
-//             case 'U': ob.replace_order(msg.repl); break;
-//         }
-//     }
+    float S_f = (float)spot_price_ticks / 10000.0f;
+    union { float f; int i; } u_in;
+    u_in.f = S_f;
+    bit32_t spot_price_bits = (bit32_t)u_in.i;
+    
+    result_type result = bs(spot_price_bits);
 
-//     if (!in.empty()) {
-//         OBInput msg = in.read();
+    // ------------------------------------------------------
+    // Output processing
+    // ------------------------------------------------------
+    // Convert results back to 32-bit words
+    union { float fval; int ival; } ucall;
+    union { float fval; int ival; } uput;
 
-//         MsgType mt = static_cast<MsgType>(msg.type.to_uint());
+    ucall.fval = result.call;
+    uput.fval  = result.put;
 
-//         switch (mt) {
-//             case MSG_ADD:     ob.add_order(msg.add);      break;
-//             case MSG_EXEC:    ob.execute_order(msg.exec); break;
-//             case MSG_CANCEL:  ob.cancel_order(msg.cancel);break;
-//             case MSG_DELETE:  ob.delete_order(msg.del);   break;
-//             case MSG_REPLACE: ob.replace_order(msg.repl); break;
-//             default: break;
-//         }
+    bit32_t icall = static_cast<bit32_t>(ucall.ival);
+    bit32_t iput  = static_cast<bit32_t>(uput.ival);
 
-//         OBOutput o;
-//         o.bestBid    = ob.getBestBid();
-//         o.bestAsk    = ob.getBestAsk();
-//         o.orderCount = ob.countOrders();
-
-//         out.write(o);
-//     }
-// }
+    // Write output to stream (call, put)
+    strm_out.write(icall);
+    strm_out.write(iput);
+}
 
 bit32_t orderbook(ParsedMessage* msg) {
     static OrderBook ob;
@@ -426,12 +424,17 @@ bit32_t orderbook(ParsedMessage* msg) {
         case 'X': ob.cancel_order   (*msg); break;
         case 'D': ob.delete_order   (*msg); break;
         case 'U': ob.replace_order  (*msg); break;
-
-    default:
-        break;
+        default: break;
     }
 
-    bit32_t out = ob.getBestBid();
+    bit32_t best_bid = ob.getBestBid();
+    bit32_t best_ask = ob.getBestAsk();
+    bit32_t avg = (best_bid + best_ask) >> 1;  // divide by 2 using shift
+
+    // // ---- PRINTING HERE IS NOT SYNTHESIZABLE ----
+    // double price_display = avg / 10000.0;
+    // std::cout << std::fixed << std::setprecision(4)
+    //          << "Spot_Price=" << std::setw(8) << price_display << " | "; 
     
-    return out;
+    return avg;
 }

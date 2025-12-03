@@ -15,6 +15,8 @@
 
 #include "itch_reader.hpp"
 
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_500";
+
 //--------------------------------------
 // main function
 //--------------------------------------
@@ -34,11 +36,9 @@ int main(int argc, char **argv) {
   Timer timer("FPGA Communication");
 
   // Use ITCH Reader to open and parse a data file
-  // NOTE: The path is relative to where the executable is run from
-  const char* data_file = "data/12302019/filtered_A";
-  ITCH::Reader reader(data_file);
+  ITCH::Reader reader(INPUT_ITCH_FILE);
   if (!reader.isOpen()) {
-      std::cerr << "Failed to open data file: " << data_file << std::endl;
+      std::cerr << "Failed to open data file: " << INPUT_ITCH_FILE << std::endl;
       return -1;
   }
 

@@ -1,49 +1,43 @@
 #include "itch.hpp"
-#include "itch_common.hpp"
 
-#include <iostream>
-#include <iomanip>
-#include <cassert>
-
-static inline ap_uint<64> read_u64_be(const char* p) {
+static inline bit64_t read_u64_be(const char* p) {
 // #pragma HLS INLINE
-    ap_uint<64> v = 0;
+    bit64_t v = 0;
     for (int i = 0; i < 8; ++i) {
     // #pragma HLS PIPELINE II=1
     #pragma HLS UNROLL
         v <<= 8;
-        v |= (ap_uint<64>)((unsigned char)p[i]);
+        v |= (bit64_t)((unsigned char)p[i]);
     }
     return v;
 }
 
-static inline ap_uint<32> read_u32_be(const char* p) {
+static inline bit32_t read_u32_be(const char* p) {
 // #pragma HLS INLINE
-    ap_uint<32> v = 0;
+    bit32_t v = 0;
     for (int i = 0; i < 4; ++i) {
     // #pragma HLS PIPELINE II=1
     #pragma HLS UNROLL
         v <<= 8;
-        v |= (ap_uint<32>)((unsigned char)p[i]);
+        v |= (bit32_t)((unsigned char)p[i]);
     }
     return v;
 }
 
 void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
+    // ------------------------------------------------------
     // Input processing
-    bit32_t hdr    = strm_in.read();
-    uint16_t msg_len = (uint16_t)hdr(15, 0);
-    // bit4_t msg_len = (bit4_t)hdr(3, 0);
-    // std::cerr << "hdr: " << (uint16_t)hdr(15, 0) << std::endl;
-    // assert((uint16_t)hdr(15, 0) <= 15);
-    assert(msg_len == (uint16_t)hdr(15, 0));
+    // ------------------------------------------------------
+    bit32_t hdr = strm_in.read();
+    bit16_t msg_len = (bit16_t)hdr(15, 0);
+    assert(msg_len == (bit16_t)hdr(15, 0));
 
-    char in_buffer[MAX_MESSAGE_SIZE];   // 36 bytes is enough for our ITCH msgs
+    char in_buffer[36];   // 36 bytes is enough for our ITCH msgs
     int  idx   = 0;
-    bit4_t words = (msg_len + 3) >> 2;    // # of 32-bit words = ceil(msg_len/4)
-    // assert(words <= 15);
-    assert((msg_len + 3) >> 2 == (uint16_t)words);
 
+    // Handle variable msg length
+    bit4_t words = (msg_len + 3) >> 2;    // # of 32-bit words = ceil(msg_len/4)
+    assert((msg_len + 3) >> 2 == (bit16_t)words);
     for (int w = 0; w < words; ++w) {
     // #pragma HLS PIPELINE II=1
         bit32_t word = strm_in.read();
@@ -56,16 +50,9 @@ void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
         } 
     }
 
-    // Optional debug: reconstructed message
-#ifdef ITCH_DEBUG_PRINT
-    std::cout << "DUT's reconstructed msg:      ";
-    for (int i = 0; i < msg_len; ++i) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0')
-                  << (unsigned int)(unsigned char)in_buffer[i] << " ";
-    }
-    std::cout << std::dec << "\n";
-#endif
-
+    // ------------------------------------------------------
+    // Call parser
+    // ------------------------------------------------------
     ParsedMessage parsed = parser(in_buffer);
 
     // ------------------------------------------------------
@@ -85,22 +72,16 @@ void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
 
 ParsedMessage parser(char* buffer) {
     ParsedMessage out;
-    out.type         = 0;
-    out.side         = 0;
-    out.order_id     = 0;
-    out.new_order_id = 0;
-    out.shares       = 0;
-    out.price        = 0;
 
     char msgType = buffer[0];
-    out.type = (ap_uint<8>)msgType;
+    out.type = (bit8_t)msgType;
 
     switch (msgType) {
 
     // ---------------- Add Order ('A') ----------------
     case ITCH::AddOrderMessageType: {
         out.order_id = read_u64_be(buffer + 11);
-        out.side     = (ap_uint<8>)buffer[19];
+        out.side     = (bit8_t)buffer[19];
         out.shares   = read_u32_be(buffer + 20);
         out.price    = read_u32_be(buffer + 32);
         break;
@@ -117,7 +98,6 @@ ParsedMessage parser(char* buffer) {
     case ITCH::OrderExecutedWithPriceMessageType: {
         out.order_id = read_u64_be(buffer + 11);
         out.shares   = read_u32_be(buffer + 19);
-        // out.price    = read_u32_be(buffer + 32);
         break;
     }
 
@@ -146,6 +126,11 @@ ParsedMessage parser(char* buffer) {
     default:
         break;
     }
+
+    // // ---- PRINTING HERE IS NOT SYNTHESIZABLE ----
+    // double price_display = out.price / 10000.0;
+    // std::cout << std::fixed << std::setprecision(4)
+    //          << "Msg_Price=" << std::setw(8) << price_display << " | "; 
 
     return out;
 }

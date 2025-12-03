@@ -1,5 +1,3 @@
-#include <iostream>
-#include <cmath>
 #include "blackscholes.hpp"
 
 theta_type K = 100.0f; // Strike price

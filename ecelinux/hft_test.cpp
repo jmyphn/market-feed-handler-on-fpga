@@ -1,14 +1,6 @@
 #include "hft.hpp"
 
-#include <iostream>
-#include <iomanip>
-#include <hls_stream.h>
-#include <fstream>
-#include <unordered_map>
-#include <cstdint>
-
-
-static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_A";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_500";
 
 int main() {
     try {
@@ -58,7 +50,7 @@ int main() {
     std::cout << "============================================\n";
     std::cout << " HFT FPGA Testbench Summary\n";
     std::cout << "============================================\n";
-    std::cout << "Parsed file                 : " << INPUT_ITCH_FILE << "\n";
+    std::cout << "Input file                  : " << INPUT_ITCH_FILE << "\n";
     std::cout << "Total messages              : " << total << "\n";
     std::cout << "Total bytes read            : " << reader.getTotalBytesRead() << "\n\n";
 

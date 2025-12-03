@@ -1,29 +1,16 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <iomanip>
-#include <cmath>
-
 #include "blackscholes.hpp"
-#include <hls_stream.h>
 
-// Helper: float → bits
-static inline bit32_t float_to_bits(float x) {
-    union { float f; uint32_t u; } u;
-    u.f = x;
-    return (bit32_t)u.u;
-}
+static const char* INPUT_ITCH_FILE = "data/bs_15.dat";
 
 int main() {
 
     // --------------------------------------------------------------
     // Open the input test file
     // --------------------------------------------------------------
-    std::ifstream infile("data/bs_5.dat");
-    // std::ofstream outfile("result/out_bs.dat");
+    std::ifstream infile(INPUT_ITCH_FILE);
 
     if (!infile.is_open()) {
-        std::cerr << "ERROR: Could not open data/testing_set.dat\n";
+        std::cerr << "ERROR: Could not open " << INPUT_ITCH_FILE << "\n";
         return 1;
     }
 
@@ -60,7 +47,7 @@ int main() {
     }
 
     infile.close();
-    std::cout << "Loaded " << N << " Black–Scholes test vectors.\n";
+    std::cout << "Loaded " << N << " Black–Scholes test vectors.\n\n";
 
     int errors = 0;
 
@@ -89,34 +76,28 @@ int main() {
         bool pass = (call_err < EPS && put_err < EPS);
         if (!pass) errors++;
 
-        // ---- PRINT EACH RESULT TO STDOUT ----
-        std::cout << std::fixed << std::setprecision(6);
-        std::cout << "S=" << S
-                  << " | Call_HW=" << call_hw << "  Exp=" << call_exp
-                  << " | Put_HW="  << put_hw  << "  Exp=" << put_exp
-                  << " | Status="  << (pass ? "PASS" : "FAIL")
-                  << "\n";
-
-        // // Log result
-        // outfile << "S=" << S
-        //         << "  HW(Call)=" << call_hw << "  Exp(Call)=" << call_exp
-        //         << "  HW(Put)="  << put_hw  << "  Exp(Put)="  << put_exp
-        //         << "  Status=" << (pass ? "PASS" : "FAIL") << "\n";
+        std::cout << std::fixed << std::setprecision(2);
+        std::cout 
+            << "S=" << std::left << std::setw(6) << S
+            << " | Call_HW=" << std::left << std::setw(7) << call_hw
+            << " Exp=" << std::left << std::setw(7) << call_exp
+            << " | Put_HW=" << std::left << std::setw(7) << put_hw
+            << " Exp=" << std::left << std::setw(7) << put_exp
+            << " | Status=" << (pass ? "PASS" : "FAIL")
+            << "\n";
     }
 
-    // Report overall error out of all testing instances
+    // Summary
     std::cout << "\n";
     std::cout << "============================================\n";
     std::cout << " Black–Scholes FPGA Testbench Summary\n";
     std::cout << "============================================\n";
-    std::cout << "Total test instances: " << N << "\n";
-    std::cout << "Total mismatches:     " << errors << "\n";
-    std::cout << "Error rate:           "
-              << std::setprecision(4)
-              << (100.0 * errors / N) << "%\n";
-    std::cout << "============================================\n";
+    std::cout << "Input file            : " << INPUT_ITCH_FILE << "\n";
+    std::cout << "Total test instances  : " << N << "\n\n";
 
-    // outfile.close();
+    std::cout << "Error rate            : " << std::setprecision(4)
+            << (100.0 * errors / N) << "%\n";
+    std::cout << "============================================\n";
 
     return 0;
 }

@@ -39,14 +39,12 @@ public:
 #endif
     if (fdItch == -1) {
       delete[] buffer;
-      // throw std::invalid_argument(std::string("Failed to open file: ") + _filename);
       std::cerr << "Failed to open file: " << _filename << "\n";
     }
     ssize_t readBytes = ::read(fdItch, buffer, bufferSize);
     if (readBytes <= 0) {
       delete[] buffer;
       ::close(fdItch);
-      // throw std::invalid_argument(std::string("Failed to read from file: ") + _filename);
       std::cerr << "Failed to read from file: " << _filename << "\n";
 
     }
@@ -91,7 +89,6 @@ public:
       ssize_t readBytes = ::read(fdItch, buffer + offset, bufferSize - offset);
       if (readBytes <= 0) {
         if (readBytes == 0) return nullptr;
-        // throw std::runtime_error("Failed to read from file");
         std::cerr << "Failed to read from file\n";
       }
       validBytes = static_cast<size_t>(readBytes) + offset;

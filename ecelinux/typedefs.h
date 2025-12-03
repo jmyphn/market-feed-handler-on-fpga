@@ -8,49 +8,22 @@
 
 #include <ap_int.h>
 
-typedef bool bit;
-// orderbook capacity
-#define CAPACITY 4096 // TODO: make bigger later, like 4096
+// typedef bool bit;
 
-typedef ap_int<8> bit8_t;
-typedef ap_int<16> bit16_t;
 typedef ap_uint<2> bit2_t;
 typedef ap_uint<4> bit4_t;
+typedef ap_uint<8> bit8_t;
+typedef ap_uint<16> bit16_t;
 typedef ap_uint<32> bit32_t;
-
-#ifndef TYPE_H
-#define TYPE_H
-#include <stdbool.h>
-#include <stdint.h>
-
-// typedefs
-
-typedef uint8_t u8_t;
-typedef uint16_t u16_t;
-typedef uint32_t u32_t;
-typedef uint64_t u64_t;
-typedef uint8_t u48_t[6];
-
-typedef uint32_t price_4_t;
-typedef uint64_t price_8_t;
-
-typedef char char_t;
-typedef char char_2_t[2];
-typedef char char_4_t[4];
-typedef char char_8_t[8];
-typedef char char_10_t[10];
-typedef char char_20_t[20];
-
+typedef ap_uint<64> bit64_t;
 
 struct ParsedMessage {
-    ap_uint<8>  type;
-    ap_uint<8>  side;
-    ap_uint<64> order_id;
-    ap_uint<64> new_order_id;
-    ap_uint<32> shares;
-    ap_uint<32> price;
+    ap_uint<8>  type         = 0;
+    ap_uint<8>  side         = 0;
+    ap_uint<64> order_id     = 0;
+    ap_uint<64> new_order_id = 0;
+    ap_uint<32> shares       = 0;
+    ap_uint<32> price        = 0;
 };
 
-#endif // TYPE_H
-
-#endif
+#endif // TYPEDEFS
