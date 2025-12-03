@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 
   // Use ITCH Reader to open and parse a data file
   // NOTE: The path is relative to where the executable is run from
-  const char* data_file = "data/12302019/filtered_500";
+  const char* data_file = "data/12302019/filtered_A";
   ITCH::Reader reader(data_file);
   if (!reader.isOpen()) {
       std::cerr << "Failed to open data file: " << data_file << std::endl;
