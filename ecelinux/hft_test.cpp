@@ -1,6 +1,6 @@
 #include "hft.hpp"
 
-static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_1mil";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_500";
 
 int main() {
     try {
