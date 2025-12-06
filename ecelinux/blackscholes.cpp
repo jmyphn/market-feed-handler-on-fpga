@@ -59,7 +59,7 @@ void black_scholes_price(theta_type S_in, result_type &result) {
     result.call = 0.0f;
     result.put  = 0.0f;
     return;
-  }mak
+  }
 
   theta_type S_over_K = S_in * invK;
   theta_type log_S_over_K = std::log(S_over_K);
