@@ -1,9 +1,21 @@
+//=========================================================================
+// hft_test.cpp
+//=========================================================================
+// @brief: testbench for the hft application
+
 #include "hft.hpp"
+#include "timer.h"
 
-static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_1mil";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_500";
 
+//------------------------------------------------------------------------
+// HFT testbench
+//------------------------------------------------------------------------
 int main() {
     try {
+        // Timer
+        Timer timer("hft");
+
         ITCH::Reader reader(INPUT_ITCH_FILE, 16384);
 
         hls::stream<bit32_t> in_stream;
@@ -13,6 +25,9 @@ int main() {
         uint64_t total = 0;
 
         const char* msg = nullptr;
+
+        timer.start();
+
         while ((msg = reader.nextMessage())) {
             auto t = ITCH::Parser::getDataMessageType(msg);
             counts[t]++; total++;
@@ -40,11 +55,14 @@ int main() {
             float call_hw = bits_to_float(out_stream.read());
             float put_hw  = bits_to_float(out_stream.read());
 
+            // // ---- PRINTING HERE INFLATES TIMING ----
             // std::cout << std::fixed << std::setprecision(6);
             // std::cout << "Call_HW=" << call_hw << " | Put_HW="  << put_hw << "\n";
         }
 
-        // Summary only
+        timer.stop();
+
+    // Summary only
     std::cout << "\n";
     std::cout << "============================================\n";
     std::cout << " HFT FPGA Testbench Summary\n";
