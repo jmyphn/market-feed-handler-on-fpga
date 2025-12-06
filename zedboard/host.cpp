@@ -73,14 +73,14 @@ int main(int argc, char **argv) {
             word |= (uint32_t)byte << (8 * (3 - b));
         }
 
-        // std::cout << "writing word: 0x" << std::hex << word << std::dec << std::endl;
+        // std::cout << "Writing word: 0x" << std::hex << word << std::dec << std::endl;
         nbytes = write(fdw, (void*)&word, sizeof(word));
         assert(nbytes == sizeof(word));
       }
       messages_sent++;
   }
 
-  std::cout << "All messages sent (" << messages_sent << " total). Waiting for results from FPGA..." << std::endl;
+  // std::cout << "All messages sent (" << messages_sent << " total). Waiting for results from FPGA..." << std::endl;
 
   // Read results from the FPGA
   // Expect one 64-bit result (call + put prices) per message sent
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
       memcpy(&call_price, &call_bits, sizeof(float));
       memcpy(&put_price, &put_bits, sizeof(float));
       
-      std::cout << "Message " << (i+1) << ": Call=" << call_price << ", Put=" << put_price << std::endl;
+      // std::cout << "Message " << (i+1) << ": Call=" << call_price << ", Put=" << put_price << std::endl;
       results_received++;
   }
 

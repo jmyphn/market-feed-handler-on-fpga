@@ -1,11 +1,10 @@
 #include "hft.hpp"
 
-static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_500";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_1mil";
 
 int main() {
     try {
         ITCH::Reader reader(INPUT_ITCH_FILE, 16384);
-        std::ofstream outfile("result/itch_csim.txt");
 
         hls::stream<bit32_t> in_stream;
         hls::stream<bit32_t> out_stream;
@@ -41,8 +40,8 @@ int main() {
             float call_hw = bits_to_float(out_stream.read());
             float put_hw  = bits_to_float(out_stream.read());
 
-            std::cout << std::fixed << std::setprecision(6);
-            std::cout << "Call_HW=" << call_hw << " | Put_HW="  << put_hw << "\n";
+            // std::cout << std::fixed << std::setprecision(6);
+            // std::cout << "Call_HW=" << call_hw << " | Put_HW="  << put_hw << "\n";
         }
 
         // Summary only
@@ -61,8 +60,6 @@ int main() {
     std::cout << "OrderDelete (D)             : " << counts['D'] << "\n";
     std::cout << "OrderReplace (U)            : " << counts['U'] << "\n";
     std::cout << "============================================\n";
-
-    outfile.close();
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";

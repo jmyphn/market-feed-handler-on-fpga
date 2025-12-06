@@ -25,7 +25,7 @@ TCL_SCRIPT=run_hft.tcl
 
 .PHONY: all itch_csim ob_csim bs_csim hft_csim bitstream clean
 
-all: itch_csim ob_csim bs_csim hft_csim
+all: hft_csim
 
 itch: itch_test.cpp itch.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
