@@ -73,16 +73,9 @@ int main(int argc, char **argv) {
             word |= (uint32_t)byte << (8 * (3 - b));
         }
 
-        std::cout << "writing word: 0x" << std::hex << word << std::dec << std::endl;
+        // std::cout << "writing word: 0x" << std::hex << word << std::dec << std::endl;
         nbytes = write(fdw, (void*)&word, sizeof(word));
         assert(nbytes == sizeof(word));
-
-          // uint32_t word = 0;
-          // // Copy up to 4 bytes into a 32-bit word
-          // memcpy(&word, buffer + 2 + i * 4, std::min(4, message_length - i * 4));
-          // std::cout << "writing word: " << word << std::endl;
-          // nbytes = write(fdw, (void*)&word, sizeof(word));
-          // assert(nbytes == sizeof(word));
       }
       messages_sent++;
   }
@@ -95,7 +88,7 @@ int main(int argc, char **argv) {
   int results_received = 0;
   
   for (int i = 0; i < messages_sent; i++) {
-    std::cout << "Receiving result " << (i+1) << " of " << messages_sent << "..." << std::endl;
+    // std::cout << "Receiving result " << (i+1) << " of " << messages_sent << "..." << std::endl;
       nbytes = read(fdr, (void*)&result_data, sizeof(result_data));
       if (nbytes <= 0) {
           std::cerr << "Error: Expected " << messages_sent << " results but only received " << results_received << std::endl;

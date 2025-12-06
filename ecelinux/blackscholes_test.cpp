@@ -96,7 +96,7 @@ int main() {
     std::cout << "Total test instances  : " << N << "\n\n";
 
     std::cout << "Error rate            : " << std::setprecision(4)
-            << (100.0 * errors / N) << "%\n";
+              << (100.0 * errors / N) << "%\n";
     std::cout << "============================================\n";
 
     return 0;

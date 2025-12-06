@@ -3,9 +3,12 @@
 #==========================================================================
 # @brief: A makefile the compiles and synthesizes the feed handler program
 #
-# @desc: 1. "make" runs csim by default
-#        2. "make csim" compiles & executes the software implementation
-#        3. "make clean" cleans up the directory
+# @desc: 1. "make" runs all csim by default
+#        2. "make itch_csim" compiles & executes the itch implementation
+#        3. "make ob_csim" compiles & executes the orderbook implementation
+#        4. "make bs_csim" compiles & executes the black scholes implementation
+#        5. "make hft_csim" compiles & executes the top level implementation
+#        6. "make clean" cleans up the directory
 
 XILINX_VIVADO?=/opt/xilinx/Vivado/2019.2
 XIL_HLS=source $(XILINX_VIVADO)/settings64.sh; vivado_hls
@@ -20,9 +23,9 @@ endif
 
 TCL_SCRIPT=run_hft.tcl
 
-.PHONY: all itch_csim bs_csim orderbook_csim bitstream clean
+.PHONY: all itch_csim ob_csim bs_csim hft_csim bitstream clean
 
-all: itch_csim orderbook_csim bs_csim
+all: itch_csim ob_csim bs_csim hft_csim
 
 itch: itch_test.cpp itch.cpp
 	g++ ${CFLAGS} $^ -o $@ -lrt
@@ -79,5 +82,5 @@ bitstream: xillydemo.bit
 	@echo "Bitstream saved to $<"
 
 clean:
-	rm -rf itch bs orderbook hft *.dat *.prj *.log
+	rm -rf itch bs ob hft *.dat *.prj *.log
 	rm -rf zedboard_project* xillydemo.bit

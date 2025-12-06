@@ -1,6 +1,6 @@
 #include "itch.hpp"
 
-static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_A";
+static const char* INPUT_ITCH_FILE = "./data/12302019/filtered_500";
 
 //------------------------------------------------------------------------
 // Parser testbench
@@ -120,7 +120,7 @@ int main() {
     std::cout << "OrderReplace (U)            : " << counts['U'] << "\n\n";
 
     std::cout << "Error rate                  : " << std::setprecision(4)
-            << (100.0 * errors / total) << "%\n";
+              << (100.0 * errors / total) << "%\n";
     std::cout << "============================================\n";
 
     outfile.close();
