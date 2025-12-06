@@ -15,7 +15,7 @@
  * If pq is full, drop last element (not max).
  */
 void keep_slim(priority_queue &pq, hash_tbl tbl) {
-#pragma HLS INLINE
+// #pragma HLS INLINE
     if (pq.size == CAPACITY) {
         --pq.size;
 
@@ -42,12 +42,12 @@ void keep_slim(priority_queue &pq, hash_tbl tbl) {
  * Removes up to CAPACITY heads, but exits early.
  */
 void balance(priority_queue &pq, hash_tbl tbl) {
-#pragma HLS INLINE off
+// #pragma HLS INLINE off
 
 BALANCE_LOOP:
     for (int i = 0; i < CAPACITY; i++) {
 // #pragma HLS PIPELINE II=1
-        #pragma HLS UNROLL factor=16
+        // #pragma HLS UNROLL factor=16
 
         if (pq.size == 0) break;
 
@@ -74,7 +74,7 @@ BALANCE_LOOP:
  * Remove shares from entry
  */
 void remove_shares(hash_tbl tbl, key_type order_id, val_type &shares) {
-#pragma HLS INLINE
+// #pragma HLS INLINE
     int idx = hash_tbl_lookup(tbl, order_id);
     if (idx != -1) {
         hash_entry &curr_entry = tbl[idx];
@@ -89,7 +89,7 @@ void remove_shares(hash_tbl tbl, key_type order_id, val_type &shares) {
  * Remove all shares for an entry
  */
 void remove_all_shares(hash_tbl tbl, key_type order_id) {
-#pragma HLS INLINE
+// #pragma HLS INLINE
     int idx = hash_tbl_lookup(tbl, order_id);
     if (idx != -1) {
         hash_entry &curr_entry = tbl[idx];
@@ -103,7 +103,7 @@ void remove_all_shares(hash_tbl tbl, key_type order_id) {
 void orderbook(hls::stream<ParsedMessage> &orders,
                hls::stream<bit32_t> &spot_prices) {
 
-#pragma HLS INLINE off
+// #pragma HLS INLINE off
 
     static priority_queue bid_pq;
     static priority_queue ask_pq;

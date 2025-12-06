@@ -9,7 +9,7 @@ theta_type T = 1.0f;   // One year until expiry
 
 template <typename T>
 T custom_log(const T& x) {
-  #pragma HLS INLINE
+  // #pragma HLS INLINE
   if (x <= 0) {
     std::cerr << "Error: Input must be greater than 0" << std::endl;
     return -1.0; 
@@ -25,7 +25,7 @@ T custom_log(const T& x) {
 
   for (int i = 1; i <= logTerms; i++) {
     // #pragma HLS pipeline II=1
-    #pragma HLS UNROLL
+    // #pragma HLS UNROLL
     result += numerator / denominator;
     numerator *= term_squared;
     denominator += 2;
@@ -36,14 +36,14 @@ T custom_log(const T& x) {
 
 template <typename T>
 T custom_exp(const T& x) {
-  #pragma HLS INLINE
+  // #pragma HLS INLINE
   T result = 1.0;
   T term = 1.0;
   const int expTerms = 10;
 
   for (int i = 1; i <= expTerms; i++) {
     // #pragma HLS pipeline II=1
-    #pragma HLS UNROLL
+    // #pragma HLS UNROLL
     term *= x / (T)i;
     result += term;
   }
@@ -53,7 +53,7 @@ T custom_exp(const T& x) {
 
 
 static theta_type normal_cdf(theta_type x) {
-#pragma HLS INLINE
+// #pragma HLS INLINE
     const theta_type a1 = 0.31938153f;
     const theta_type a2 = -0.356563782f;
     const theta_type a3 = 1.781477937f;
@@ -91,7 +91,7 @@ static const theta_type inv_denom  = 1.0f / denom;
 
 
 void black_scholes_price(theta_type S_in, result_type &result) {
-  #pragma HLS INLINE
+  // #pragma HLS INLINE
   if (S_in <= 0 || K <= 0 || v <= 0 || T <= 0) {
     result.call = 0.0f;
     result.put  = 0.0f;
@@ -118,7 +118,7 @@ void black_scholes_price(theta_type S_in, result_type &result) {
 }
 
 void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
-  #pragma HLS INLINE off
+  // #pragma HLS INLINE off
   // Read spot price from input stream
   bit32_t in_bits = strm_in.read();
 

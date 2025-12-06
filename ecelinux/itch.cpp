@@ -8,7 +8,7 @@ static inline ap_uint<64> read_u64_be(const char* p) {
 // #pragma HLS INLINE
     ap_uint<64> v = 0;
     for (int i = 0; i < 8; ++i) {
-    #pragma HLS PIPELINE II=1
+    // #pragma HLS PIPELINE II=1
         v <<= 8;
         v |= (ap_uint<64>)((unsigned char)p[i]);
     }
@@ -19,7 +19,7 @@ static inline ap_uint<32> read_u32_be(const char* p) {
 // #pragma HLS INLINE
     ap_uint<32> v = 0;
     for (int i = 0; i < 4; ++i) {
-    #pragma HLS PIPELINE II=1
+    // #pragma HLS PIPELINE II=1
         v <<= 8;
         v |= (ap_uint<32>)((unsigned char)p[i]);
     }
@@ -36,7 +36,7 @@ void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     int  words = (msg_len + 3) >> 2;    // # of 32-bit words = ceil(msg_len/4)
 
     for (int w = 0; w < words; ++w) {
-    #pragma HLS PIPELINE II=1
+    // #pragma HLS PIPELINE II=1
         bit32_t word = strm_in.read();
 
         if (idx < msg_len){
