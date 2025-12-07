@@ -16,7 +16,7 @@ struct Order {
     bool        valid;
 };
 
-#define MAX_ORDERS 2048
+#define MAX_ORDERS 4096
 #define SIDE_BUY   'B'
 #define SIDE_SELL  'S'
 
@@ -28,8 +28,6 @@ class OrderBook {
 public:
     Order bidOrders[MAX_ORDERS];
     Order askOrders[MAX_ORDERS];
-    #pragma hls arary_partition bidOrders block factor=32
-    #pragma hls arary_partition askOrders block factor=32
 
     OrderBook() {
         init();
@@ -195,6 +193,8 @@ void execute_msg(OrderBook& ob, ParsedMessage &msg) {
 
 bit32_t orderbook(ParsedMessage* msg) {
     static OrderBook ob;
+    #pragma hls array_partition variable=ob.bidOrders block factor=128
+    #pragma hls array_partition variable=ob.askOrders block factor=128
 
     execute_msg(ob, *msg);
 
@@ -218,6 +218,8 @@ void orderbook_dut(hls::stream<bit32_t> &strm_in,
 {
 
     static OrderBook ob;
+    #pragma hls array_partition variable=ob.bidOrders block factor=128
+    #pragma hls array_partition variable=ob.askOrders block factor=128
 
     // Require 7 words per message
     if (strm_in.size() < 7)
