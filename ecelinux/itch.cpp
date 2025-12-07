@@ -1,11 +1,8 @@
 #include "itch.hpp"
 
 static inline bit64_t read_u64_be(const char* p) {
-// #pragma HLS INLINE
     bit64_t v = 0;
     for (int i = 0; i < 8; ++i) {
-    // #pragma HLS PIPELINE II=1
-    #pragma HLS UNROLL
         v <<= 8;
         v |= (bit64_t)((unsigned char)p[i]);
     }
@@ -13,11 +10,8 @@ static inline bit64_t read_u64_be(const char* p) {
 }
 
 static inline bit32_t read_u32_be(const char* p) {
-// #pragma HLS INLINE
     bit32_t v = 0;
     for (int i = 0; i < 4; ++i) {
-    // #pragma HLS PIPELINE II=1
-    #pragma HLS UNROLL
         v <<= 8;
         v |= (bit32_t)((unsigned char)p[i]);
     }
@@ -39,7 +33,6 @@ void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     bit4_t words = (msg_len + 3) >> 2;    // # of 32-bit words = ceil(msg_len/4)
     assert((msg_len + 3) >> 2 == (bit16_t)words);
     for (int w = 0; w < words; ++w) {
-    // #pragma HLS PIPELINE II=1
         bit32_t word = strm_in.read();
 
         if (idx < msg_len){
@@ -130,7 +123,7 @@ ParsedMessage parser(char* buffer) {
     // // ---- PRINTING HERE IS NOT SYNTHESIZABLE ----
     // double price_display = out.price / 10000.0;
     // std::cout << std::fixed << std::setprecision(4)
-    //          << "Msg_Price=" << std::setw(8) << price_display << " | "; 
+    //          << "Msg_Price=" << std::setw(10) << price_display << " | "; 
 
     return out;
 }

@@ -15,7 +15,6 @@ void dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     bit4_t words = (msg_len + 3) >> 2;    // # of 32-bit words = ceil(msg_len/4)
     assert((msg_len + 3) >> 2 == (bit16_t)words);
     for (int w = 0; w < words; ++w) {
-    // #pragma HLS PIPELINE II=1
         bit32_t word = strm_in.read();
 
         if (idx < msg_len){
