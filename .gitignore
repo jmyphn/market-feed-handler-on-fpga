@@ -1,2 +1,6 @@
 result/
 *.o
+*.zip
+*.vscode
+*.prj/
+*.prj.bak/
