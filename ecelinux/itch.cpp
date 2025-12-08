@@ -130,6 +130,7 @@ ParsedMessage parser(char* buffer) {
     }
 
     // // ---- PRINTING HERE IS NOT SYNTHESIZABLE ----
+    // std::cout << "Type " << msgType << " | ";
     // double price_display = out.price / 10000.0;
     // std::cout << std::fixed << std::setprecision(4)
     //          << "Msg_Price=" << std::setw(8) << price_display << " | "; 
