@@ -4,8 +4,6 @@
 // OrderBook internal data structures
 // ===============================================================
 
-#define OPT
-
 // Index type for arrays (-1 = none)
 typedef ap_int<16> idx_t;
 
