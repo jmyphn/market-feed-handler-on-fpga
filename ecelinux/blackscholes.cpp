@@ -7,6 +7,7 @@ theta_type T = 1.0f;   // One year until expiry
 
 // Helper: float → bits
 bit32_t float_to_bits(float x) {
+#pragma HLS INLINE
     union { float f; uint32_t u; } u;
     u.f = x;
     return (bit32_t)u.u;
@@ -14,6 +15,7 @@ bit32_t float_to_bits(float x) {
 
 // Helper: bits → float
 float bits_to_float(bit32_t w) {
+#pragma HLS INLINE
     union { float f; uint32_t u; } u;
     u.u = (uint32_t)w;
     return u.f;
@@ -54,7 +56,7 @@ static const theta_type denom      = sigma * sqrtT;
 static const theta_type inv_denom  = 1.0f / denom;
 
 void black_scholes_price(theta_type S_in, result_type &result) {
-  #pragma HLS INLINE
+#pragma HLS INLINE
   if (S_in <= 0 || K <= 0 || v <= 0 || T <= 0) {
     result.call = 0.0f;
     result.put  = 0.0f;

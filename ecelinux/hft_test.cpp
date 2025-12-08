@@ -41,6 +41,7 @@ int main() {
 
             // Pack 4 bytes per stream word
             for (int i = 0; i < msg_len; i+=4) {
+                #pragma HLS PIPELINE II=1
                 bit32_t w = 0;
                 w(31,24) = payload[i];             // MSB
                 w(23,16) = (i+1 < msg_len) ? payload[i+1] : 0;

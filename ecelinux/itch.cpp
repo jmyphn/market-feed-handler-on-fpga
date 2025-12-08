@@ -4,6 +4,7 @@ static inline bit64_t read_u64_be(const char* p) {
 #pragma HLS INLINE
     bit64_t v = 0;
     for (int i = 0; i < 8; ++i) {
+    #pragma HLS PIPELINE II=1
     #pragma HLS UNROLL
         v <<= 8;
         v |= (bit64_t)((unsigned char)p[i]);
@@ -15,6 +16,7 @@ static inline bit32_t read_u32_be(const char* p) {
 #pragma HLS INLINE
     bit32_t v = 0;
     for (int i = 0; i < 4; ++i) {
+    #pragma HLS PIPELINE II=1
     #pragma HLS UNROLL
         v <<= 8;
         v |= (bit32_t)((unsigned char)p[i]);
@@ -69,6 +71,8 @@ void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
 }
 
 ParsedMessage parser(char* buffer) {
+#pragma HLS INLINE
+    
     ParsedMessage out;
 
     char msgType = buffer[0];
