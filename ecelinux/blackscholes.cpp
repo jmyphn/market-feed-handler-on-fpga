@@ -20,6 +20,7 @@ float bits_to_float(bit32_t w) {
 }
 
 static theta_type normal_cdf(theta_type x) {
+#pragma HLS INLINE
     const theta_type a1 = 0.31938153f;
     const theta_type a2 = -0.356563782f;
     const theta_type a3 = 1.781477937f;
@@ -53,6 +54,7 @@ static const theta_type denom      = sigma * sqrtT;
 static const theta_type inv_denom  = 1.0f / denom;
 
 void black_scholes_price(theta_type S_in, result_type &result) {
+  #pragma HLS INLINE
   if (S_in <= 0 || K <= 0 || v <= 0 || T <= 0) {
     result.call = 0.0f;
     result.put  = 0.0f;
@@ -86,7 +88,10 @@ void black_scholes_price(theta_type S_in, result_type &result) {
   result.put  = put_tmp2 - put_tmp3;
 }
 
-void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){  
+void bs_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out){
+  #pragma HLS INLINE off
+  #pragma HLS PIPELINE II=1
+  
   // ------------------------------------------------------
   // Input processing
   // ------------------------------------------------------
