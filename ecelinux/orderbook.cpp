@@ -50,7 +50,8 @@ public:
 
         for (int i = 0; i < MAX_ORDERS; i++) {
             #pragma hls unroll
-            result |= (orders[i].valid && orders[i].referenceNumber == ref) ? i : 0;
+            idx_t idx_val = (idx_t)i;
+            result |= (orders[i].valid && orders[i].referenceNumber == ref) ? idx_val : (idx_t)0;
         }
         if (result != 0) return result;
         return -1;
