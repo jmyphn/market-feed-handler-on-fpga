@@ -166,18 +166,6 @@ public:
         }
         return found ? best : price_t(0);
     }
-
-    ap_uint<16> countOrders() const {
-        ap_uint<16> c1 = 0;
-        ap_uint<16> c2 = 0;
-        COUNT_BID: for (int i = 0; i < MAX_ORDERS; i++) {
-            if (bidOrders[i].valid) c1++;
-        }
-        COUNT_ASK: for (int i = 0; i < MAX_ORDERS; i++) {
-            if (askOrders[i].valid) c2++;
-        }
-        return c1 + c2;
-    }
 };
 
 
