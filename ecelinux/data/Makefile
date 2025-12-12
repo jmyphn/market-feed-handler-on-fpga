@@ -10,7 +10,7 @@
 #        3. "make clean" cleans up the directory
 
 # Run locally! The input file is too large. 
-DATE = 07302019
+DATE = 12302019
 INPUT = $(DATE).NASDAQ_ITCH50.gz
 
 .PHONY: all filter filter_per_type filter_msg clean
