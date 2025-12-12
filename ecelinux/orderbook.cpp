@@ -32,10 +32,10 @@ public:
     }
 
     void init() {
-        for (int i = 0; i < MAX_ORDERS; i++) {
+        INIT_BID: for (int i = 0; i < MAX_ORDERS; i++) {
             bidOrders[i].valid = 0;
         }
-        for (int i = 0; i < MAX_ORDERS; i++) {
+        INIT_ASK: for (int i = 0; i < MAX_ORDERS; i++) {
             askOrders[i].valid = 0;
         }
     }
@@ -43,7 +43,7 @@ public:
     idx_t find_order(order_ref_t ref, Order orders[MAX_ORDERS]) {
         idx_t result = 0;
 
-        for (int i = 0; i < MAX_ORDERS; i++) {
+        FIND_ORDER: for (int i = 0; i < MAX_ORDERS; i++) {
             #pragma HLS PIPELINE II=1
             #pragma HLS unroll factor=32
             idx_t idx_val = (idx_t)i;
@@ -55,7 +55,7 @@ public:
 
     idx_t find_free_order_slot(Order orders[MAX_ORDERS]) {
     #pragma HLS INLINE
-        for (int i = 0; i < MAX_ORDERS; i++) {
+        FIND_FREE_ORDER_SLOT: for (int i = 0; i < MAX_ORDERS; i++) {
             #pragma HLS PIPELINE II=1
             #pragma HLS unroll factor=32
             if (!orders[i].valid) return i;
@@ -141,7 +141,7 @@ public:
     price_t getBestBid() const {
     #pragma HLS INLINE
         price_t best = 0;
-        for (int i = 0; i < MAX_ORDERS; i++) {
+        BEST_BID: for (int i = 0; i < MAX_ORDERS; i++) {
             #pragma HLS unroll factor=64
             if (bidOrders[i].valid && bidOrders[i].price > best) {
                 best = bidOrders[i].price;
@@ -155,7 +155,7 @@ public:
         bool found = false;
         price_t best = 0;
 
-        for (int i = 0; i < MAX_ORDERS; i++) {
+        BEST_ASK: for (int i = 0; i < MAX_ORDERS; i++) {
             #pragma HLS unroll factor=64
             if (askOrders[i].valid) {
                 if (!found || askOrders[i].price < best) {
@@ -170,10 +170,10 @@ public:
     ap_uint<16> countOrders() const {
         ap_uint<16> c1 = 0;
         ap_uint<16> c2 = 0;
-        for (int i = 0; i < MAX_ORDERS; i++) {
+        COUNT_BID: for (int i = 0; i < MAX_ORDERS; i++) {
             if (bidOrders[i].valid) c1++;
         }
-        for (int i = 0; i < MAX_ORDERS; i++) {
+        COUNT_ASK: for (int i = 0; i < MAX_ORDERS; i++) {
             if (askOrders[i].valid) c2++;
         }
         return c1 + c2;

@@ -83,9 +83,9 @@ int main() {
     int errors = 0;
 
     // Process all messages
-    for (int i = 0; i < N; i++) {
+    OB_TEST_MSG: for (int i = 0; i < N; i++) {
         // Write message to stream
-        for (int w = 0; w < 7; w++) in_stream.write(msgs[i][w]);
+        OB_TEST_STREAM: for (int w = 0; w < 7; w++) in_stream.write(msgs[i][w]);
 
         // Run DUT
         orderbook_dut(in_stream, out_stream);

@@ -40,7 +40,7 @@ int main() {
             in_stream.write(hdr);
 
             // Pack 4 bytes per stream word
-            for (int i = 0; i < msg_len; i+=4) {
+            HFT_TEST: for (int i = 0; i < msg_len; i+=4) {
                 #pragma HLS PIPELINE II=1
                 bit32_t w = 0;
                 w(31,24) = payload[i];             // MSB

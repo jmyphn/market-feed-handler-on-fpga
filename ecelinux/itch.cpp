@@ -3,7 +3,7 @@
 static inline bit64_t read_u64_be(const char* p) {
 #pragma HLS INLINE
     bit64_t v = 0;
-    for (int i = 0; i < 8; ++i) {
+    READ_U64_BE: for (int i = 0; i < 8; ++i) {
     #pragma HLS UNROLL
         v <<= 8;
         v |= (bit64_t)((unsigned char)p[i]);
@@ -14,7 +14,7 @@ static inline bit64_t read_u64_be(const char* p) {
 static inline bit32_t read_u32_be(const char* p) {
 #pragma HLS INLINE
     bit32_t v = 0;
-    for (int i = 0; i < 4; ++i) {
+    READ_U32_BE: for (int i = 0; i < 4; ++i) {
     #pragma HLS UNROLL
         v <<= 8;
         v |= (bit32_t)((unsigned char)p[i]);
@@ -36,7 +36,7 @@ void itch_dut(hls::stream<bit32_t> &strm_in, hls::stream<bit32_t> &strm_out) {
     // Handle variable msg length
     bit4_t words = (msg_len + 3) >> 2;    // # of 32-bit words = ceil(msg_len/4)
     assert((msg_len + 3) >> 2 == (bit16_t)words);
-    for (int w = 0; w < words; ++w) {
+    ITCH_DUT: for (int w = 0; w < words; ++w) {
     #pragma HLS PIPELINE II=1
         bit32_t word = strm_in.read();
 

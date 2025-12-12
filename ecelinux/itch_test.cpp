@@ -71,7 +71,7 @@ int main() {
             in_stream.write(hdr);
 
             // Pack 4 bytes per stream word
-            for (int i = 0; i < msg_len; i+=4) {
+            ITCH_TEST_IN: for (int i = 0; i < msg_len; i+=4) {
                 bit32_t w = 0;
                 w(31,24) = payload[i];             // MSB
                 w(23,16) = (i+1 < msg_len) ? payload[i+1] : 0;
@@ -85,7 +85,7 @@ int main() {
 
             // Check results
             outfile << "Type " << t << " | ";
-            for (int i = 0; i < 7; i++) {   // read all 7 words to drain the stream
+            ITCH_TEST_OUT: for (int i = 0; i < 7; i++) {   // read all 7 words to drain the stream
                 bit32_t out_word = out_stream.read();
                 switch (i) {
                     case 0: pass = (type == out_word(7,0) && side == out_word(15,8)); break;

@@ -52,7 +52,7 @@ int main() {
     int errors = 0;
 
     // Process all test spot prices
-    for (int i = 0; i < N; i++) {
+    BS_TEST: for (int i = 0; i < N; i++) {
         float S = S_list[i];
 
         // Send spot price into DUT
